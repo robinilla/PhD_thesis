@@ -36,7 +36,7 @@ The thesis consists of the following chapters:
 | [Chapter 3.2](https://github.com/robinilla/HYs-modeling-evaluation) | Evaluation of modeling approaches to account for hunting data variability across large spatial scales - (Under Review)|
 | [Chapter 3.3](https://github.com/username/paper3.3) | (Based on the report) |
 | [Chapter 3.4](https://github.com/robinilla/GLIndex) | [Assessment of bivariate relationships between spatial patterns: revisiting the L index for wildlife management and conservation.](https://www.sciencedirect.com/science/article/pii/S1470160X25004819) |
-| [Chapter 4](https://github.com/username/paper4) | [What a camera trap network reveals about wild ungulate communities in Spain: large-scale monitoring using hierarchical N-mixture models (in prep)]() |
+| [Chapter 4](https://github.com/username/paper4) | What a camera trap network reveals about wild ungulate communities in Spain: large-scale monitoring using hierarchical N-mixture models (in prep) |
 
 
 
