@@ -1,4 +1,4 @@
-# Chapter 3.2
+# Chapter 4
 
 Evaluation of modeling approaches to account for hunting data variability across large spatial scales (Under Review - 2025)
 
