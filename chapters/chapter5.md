@@ -5,4 +5,4 @@ Accounting for spatial dependence to smooth regional patterns of wild boar abund
 Based on the report: [Perspectives from hunting bags for a continuous gradient of relative abundance of wild boars in Europe]
 
 Code Repository:
-https://github.com/robinilla/HYs-chapter-5
+https://github.com/robinilla/chapter-5
