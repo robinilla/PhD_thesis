@@ -1,4 +1,4 @@
-# Chapter 3.3
+# Chapter 5
 
 Accounting for spatial dependence to smooth regional patterns of wild boar abundance across Europe  
 
