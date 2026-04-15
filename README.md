@@ -1,4 +1,4 @@
-# PhD_thesis: Large-scale Monitoring of Wild Mammals Abundance: Modeling Frameworks for Structured and Unstructured data.
+# Large-scale Monitoring of Wild Mammals Abundance: Modeling Frameworks for Structured and Unstructured data.
 
 Author: Sonia Illanas
 Institute for Game and Wildlife Species, IREC (CSIC-UCLM-JCCM)
