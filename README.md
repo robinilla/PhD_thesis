@@ -10,7 +10,7 @@ XXXX
 
 
 ## Thesis 
-The full manuscript is available here [DOWNLOAD PDF](enlace.pdf)
+The full manuscript is available here [DOWNLOAD PDF](enlace.pdf) This link won't work until my PhD deposit is complete.
 
 ## Thesis structure
 The thesis consists of the following chapters:
