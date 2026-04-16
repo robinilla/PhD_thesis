@@ -38,7 +38,7 @@ The thesis consists of the following chapters:
 | [Chapter 7](https://github.com/robinilla/PhD_thesis/tree/main/chapters/chapter7) | Large-scale modeling of wild ungulates relative abundance from a national camera trap network (in prep) |
 
 ## Additional matherials
-
+Suplementary information of Chapter 4 can be found [here](https://github.com/robinilla/PhD_thesis/tree/main/chapters/chapter4/SupplementaryInformation)
 
 ## Citation
 
