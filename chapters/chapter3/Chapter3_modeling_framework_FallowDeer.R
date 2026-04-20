@@ -14,25 +14,25 @@ library(tidyverse)
 library(sf)
 #rm(list=ls())
 #Charge Red deer data
-Red_spatial<-st_read(dsn="wildRuminants_v5.gpkg", layer='Fd')
+spatial<-st_read(dsn="wildRuminants_v5.gpkg", layer='Fd')
 
 # IMPORTANT WARNING1: 
 # For removing Bayern federal estate it's needed that all rows have a locality not NA value. 
 # Therefore, those ones that are na we'll record their locationID+country there
-Red_spatialID<-Red_spatial %>% 
+spatialID<-spatial %>% 
   mutate(locality=ifelse(is.na(locality), paste(locationID, country), locality)) %>% 
   dplyr::filter(locality!='Bayern') 
 
-Red_spatialID<-Red_spatialID %>% mutate(locationID=ifelse(country=="PL", paste("PL_H_", locality, sep="_"), 
+spatialID<-spatialID %>% mutate(locationID=ifelse(country=="PL", paste("PL_H_", locality, sep="_"), 
                                                         ifelse(country=="Estonia", paste("EE_H_", locality, sep="_"), 
                                                                ifelse(country=="Norway", paste("NO_", locality, sep="_"), locationID))), 
                                       country=ifelse(country=="ES" | country=="Spain", "Spain", country))
 
-Red_spatial1<-Red_spatialID %>% 
+spatial1<-spatialID %>% 
   dplyr::select(starts_with("lc"), ends_with("_mean"), BR_todasr1, area_km2, country, dataTime, harvTot, locationID) %>% 
   mutate(dataTime=as.numeric(substr(dataTime, 1, 4))) %>% 
   mutate(harvTot=ifelse(harvTot>0, harvTot, 0)) 
-Red_spatial1<-Red_spatial1 %>% 
+spatial1<-spatial1 %>% 
   as_tibble() %>%
   filter(dataTime>2014) %>%  
   filter(country!="Sweden" | dataTime!=2012) %>%  
@@ -45,19 +45,19 @@ Red_spatial1<-Red_spatial1 %>%
   mutate(dataTime = str_c("harvTot", dataTime)) %>%
   pivot_wider(names_from = dataTime, values_from = c("harvTot"), names_sep="", values_fn=sum)  # long to wide
 
-Red_unique<-Red_spatialID %>% mutate(locationID_country=paste(locationID, country, sep="_"))
-Red_unique<-Red_unique[!duplicated(Red_unique$locationID_country), ]
+unique<-spatialID %>% mutate(locationID_country=paste(locationID, country, sep="_"))
+unique<-unique[!duplicated(unique$locationID_country), ]
 
-Red_spatial_<- Red_unique %>% dplyr::select(-harvTot, -species, -dataTime) %>%  
-  inner_join(Red_spatial1 %>% dplyr::select(!matches("bio") & !matches("lc") & !matches("mean"), -c(BR_todasr1, geom, area_km2)), by=c("locationID", "country")) %>%
+spatial_<- unique %>% dplyr::select(-harvTot, -species, -dataTime) %>%  
+  inner_join(spatial1 %>% dplyr::select(!matches("bio") & !matches("lc") & !matches("mean"), -c(BR_todasr1, geom, area_km2)), by=c("locationID", "country")) %>%
   rename(alt=alt_mean, Eucmean=EucalyptusSpp_mean, hfp=hfp_mean, snow=snow_mean,  sun=sun_mean) %>% 
   mutate(NUTS=as.factor(ifelse(NUTS=="comuni" | NUTS=="Concelho" | NUTS=="District" | NUTS=="Kommuner" | NUTS=="Municipality", 1, ifelse(NUTS=="NUTS0" |NUTS=="NUTS1" |NUTS=="NUTS2" |NUTS=="NUTS3", 2, 0))),
          locationID=as.factor(locationID),locality=as.factor(locality), country=as.factor(country), 
          Eucmean = replace_na(Eucmean, 0)) 
-Red_spatial_<-Red_spatial_ %>% mutate(area_km2=st_area(Red_spatial_)/1000000) ; attributes(Red_spatial_$area_km2) = NULL
+spatial_<-spatial_ %>% mutate(area_km2=st_area(spatial_)/1000000) ; attributes(spatial_$area_km2) = NULL
 
-Red_spatial_ <-Red_spatial_ %>% 
-  mutate(harvMax=pmax(Red_spatial_$harvTot2015, Red_spatial_$harvTot2016, Red_spatial_$harvTot2017, Red_spatial_$harvTot2018, Red_spatial_$harvTot2019, Red_spatial_$harvTot2020, Red_spatial_$harvTot2021, na.rm = TRUE)) %>% 
+spatial_ <-spatial_ %>% 
+  mutate(harvMax=pmax(spatial_$harvTot2015, spatial_$harvTot2016, spatial_$harvTot2017, spatial_$harvTot2018, spatial_$harvTot2019, spatial_$harvTot2020, spatial_$harvTot2021, na.rm = TRUE)) %>% 
   mutate(harvMax=ifelse(is.na(harvMax), 0, harvMax)) %>% 
   mutate(dens=round(harvMax/area_km2, 2)) %>% 
   mutate(dens_r_trans=dens*10000) %>% 
@@ -67,12 +67,10 @@ Red_spatial_ <-Red_spatial_ %>%
                 matches("lc"), 
                 harvTot2015,harvTot2016, harvTot2017,harvTot2018, harvTot2019,harvTot2020, harvTot2021, harvMax, dens, dens_r_trans, suit_mean)
 
-Red_spatial_<- Red_spatial_ %>% mutate(x_cen=st_coordinates(st_centroid(Red_spatial_))[,1], y_cen=st_coordinates(st_centroid(Red_spatial_))[,2])  
+spatial_<- spatial_ %>% mutate(x_cen=st_coordinates(st_centroid(spatial_))[,1], y_cen=st_coordinates(st_centroid(spatial_))[,2])  
 
 
-Red_spatial_ %>% arrange(dens) %>% dplyr::select(dens, area_km2) %>% na.omit() %>% tail(n=25)
-
-Red_<-Red_spatial_ %>%
+df_<-spatial_ %>%
   mutate(lc10=lc_10_sum/lc_10_count*100, lc11=lc_11_sum/lc_11_count*100, lc12=lc_12_sum/lc_12_count*100, lc20=lc_20_sum/lc_20_count*100, lc30=lc_30_sum/lc_30_count*100, lc40=lc_40_sum/lc_40_count*100, lc50=lc_50_sum/lc_50_count*100, lc60=lc_60_sum/lc_60_count*100, lc61=lc_61_sum/lc_61_count*100, lc62=lc_62_sum/lc_62_count*100, lc70=lc_70_sum/lc_70_count*100, lc71=lc_71_sum/lc_71_count*100, lc72=lc_72_sum/lc_72_count*100, lc80=lc_80_sum/lc_80_count*100, lc81=lc_81_sum/lc_81_count*100, lc82=lc_82_sum/lc_82_count*100, lc90=lc_90_sum/lc_90_count*100, lc100=lc_100_sum/lc_100_count*100, lc110=lc_110_sum/lc_110_count*100,lc120=lc_120_sum/lc_120_count*100,lc121=lc_121_sum/lc_121_count*100,lc122=lc_122_sum/lc_122_count*100,lc130=lc_130_sum/lc_130_count*100,lc140=lc_140_sum/lc_140_count*100,lc150=lc_150_sum/lc_150_count*100,lc152=lc_152_sum/lc_152_count*100,lc153=lc_153_sum/lc_153_count*100,lc160=lc_160_sum/lc_160_count*100,lc170=lc_170_sum/lc_170_count*100,lc180=lc_180_sum/lc_180_count*100,lc190=lc_190_sum/lc_190_count*100,lc200=lc_200_sum/lc_200_count*100,lc201=lc_201_sum/lc_201_count*100,lc202=lc_202_sum/lc_202_count*100,lc210=lc_210_sum/lc_210_count*100,lc220=lc_220_sum/lc_220_count*100) %>% 
   mutate(Eucmean = ifelse(Eucmean<0, 0.01, Eucmean)) %>% 
   dplyr::select(!matches("_cou") & !matches("_sum")) %>% 
@@ -83,11 +81,11 @@ Red_<-Red_spatial_ %>%
   )) %>% #quito las bioregiones porque no las vamos a usar para el modelo
   filter(dens<50) # remove silver polygons 
 
-Red_<-Red_[!is.na(Red_$dens),] #Remove NA values from RV: it does not remove any value
+df_<-df_[!is.na(df_$dens),] #Remove NA values from RV: it does not remove any value
 
-colnames(Red_)<-gsub("_mean", "", colnames(Red_))
+colnames(df_)<-gsub("_mean", "", colnames(df_))
 
-Red_<-Red_ %>% dplyr::select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), 
+df_<-df_ %>% dplyr::select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), 
                              dens, dens_r_trans,
                              matches("bio"), alt, snow, sun, Eucmean, hfp, 
                              matches("lc"), 
@@ -96,19 +94,19 @@ Red_<-Red_ %>% dplyr::select(locationID, locality, country, NUTS, BR_todasr1, ar
   rename(Bioregion=BR_todasr1)
 
 #remove NA values from the dataset
-summary(Red_)
-Red_<-Red_[!is.na(Red_$bio_01),] #Remove NA values from the Red_set
-Red_<-Red_[!is.na(Red_$snow),] #Remove NA values from the Red_set
-Red_<-Red_[!is.na(Red_$hfp),] #Remove NA values from the Red_set
-Red_<-Red_[!is.na(Red_$alt),] #Remove NA values from the Red_set
-Red_<-Red_[!is.na(Red_$lc10),] #Remove NA values from the Red_set
-summary(Red_)
+summary(df_)
+df_<-df_[!is.na(df_$bio_01),] #Remove NA values from the Red_set
+df_<-df_[!is.na(df_$snow),] #Remove NA values from the Red_set
+df_<-df_[!is.na(df_$hfp),] #Remove NA values from the Red_set
+df_<-df_[!is.na(df_$alt),] #Remove NA values from the Red_set
+df_<-df_[!is.na(df_$lc10),] #Remove NA values from the Red_set
+summary(df_)
 
 # Modeling phase
 # 1) data
 # scale all variables.
-vars_std <- c(colnames(Red_ %>% as_tibble())[c(17:71)])
-data<-Red_  %>% mutate(across(all_of(vars_std),~ as.numeric(scale(.))))
+vars_std <- c(colnames(df_ %>% as_tibble())[c(17:71)])
+data<-df_  %>% mutate(across(all_of(vars_std),~ as.numeric(scale(.))))
 
 #1.1 Create calibration and validation data set (80% / 20%)
 set.seed(500)
@@ -191,9 +189,9 @@ colnames(grid_10km)[32:65]<-gsub("lc_", "lc", colnames(grid_10km)[32:65])
 colnames(grid_10km)<-gsub("_mean", "", colnames(grid_10km))
 colnames(grid_10km)[9:17]<-gsub("bio_", "bio_0", colnames(grid_10km)[9:17])
 
-means<-Red_ %>% as_tibble() %>% dplyr::select(17:71) %>% 
+means<-df_ %>% as_tibble() %>% dplyr::select(17:71) %>% 
   summarise(across(everything(), ~ mean(.x, na.rm = TRUE)))
-sdss<-Red_ %>% as_tibble() %>% dplyr::select(17:71) %>% 
+sdss<-df_ %>% as_tibble() %>% dplyr::select(17:71) %>% 
   summarise(across(everything(), ~ sd(.x, na.rm = TRUE)))
 
 # standarize grid covariates with territorial unit means and sd!
@@ -216,7 +214,7 @@ grid_10km_<-grid_10km[c(-1:-7)]
 mess_10km_<-mess_10km[c(-2:-10)] ; names(mess_10km_)
 grid10km_mess<-grid_10km %>%  full_join(mess_10km_, by="id_buena")
 
-predRedDeer10km<-grid10km_mess %>% mutate(Pred_model=predict(DensityModel0_7, grid_10km, type="response")) %>% mutate(Pred_Red=Pred_model/10000)
-st_write(predRedDeer10km, 
+pred10km<-grid10km_mess %>% mutate(Pred_model=predict(DensityModel0_7, grid_10km, type="response")) %>% mutate(Pred=Pred_model/10000)
+st_write(pred10km, 
          dsn="predicciones_20260203.gpkg",
          layer="DensityModel_grid10km_Fd_final_xy_MESS", driver = "GPKG",append=TRUE)
