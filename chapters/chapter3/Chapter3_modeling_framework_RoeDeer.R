@@ -13,7 +13,7 @@
 library(tidyverse)
 library(sf)
 #rm(list=ls())
-#Charge Red deer data
+#Charge Roe deer data
 spatial<-st_read(dsn="wildRuminants_v5.gpkg", layer='Roe')
 
 # IMPORTANT WARNING1: 
