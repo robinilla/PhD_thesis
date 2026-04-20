@@ -18,7 +18,7 @@ library(tidyverse)   # v2.0.0
 library(ggpubr)      # v0.6.0
 
 # load data covariates information
-load(file = "~/Documentos/PhD/5_Estancia/2_WIP/0_DataPrepared/modelingData/data.model.Rdata")
+load(file = "data.model.Rdata")
 vars<-tibble(deployment = dimnames(data.model$y)[[2]], 
              data.model$abund.covs) %>% 
              separate(deployment, into = c("loc", "id"), sep = "\\.") %>% 
@@ -54,7 +54,7 @@ ggarrange(
   plot.vars(data = vars, covariate = forest,  label.y = "Forest cover (%)", color = "#3da75a"),
   plot.vars(data = vars, covariate = shrb,  label.y = "Shrub cover (%)", color = "#8cab52"),
 nrow = 5, ncol= 1)
-ggsave(file = "~/Documentos/PhD/5_Estancia/2_WIP/2_Results/MSNM_20260312_spAbundance/FigureS2.3.png",
+ggsave(file = "~/FigureS7-3.3.png",
        plot = var.var,
        width = 8, 
        height = 24,
