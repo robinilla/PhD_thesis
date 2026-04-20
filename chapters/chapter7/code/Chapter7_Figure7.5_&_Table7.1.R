@@ -20,15 +20,11 @@ library(performance) # v0.14.0
 library(flextable)   # v0.9.11
 
 # load model results
-setwd("~/Documentos/PhD/5_Estancia/2_WIP/2_Results/MSNM_20260312_spAbundance/m_HY_val/")
+setwd("~/m_HY_val/")
 
 load(file = "m_huntWITTHOUT0.Rdata")
 load(file = "m_hunt20WITHOUT0.Rdata")
 load(file = "m_hunt50WITHOUT0.Rdata")
-
-load(file = "m_gbif.Rdata")
-load(file = "m_gbif20.Rdata")
-load(file = "m_gbif50.Rdata")
 
 
 # Prepare model coefficents to export Table 2
@@ -48,22 +44,21 @@ extract_model_stats<-function(data){
           )
   }
 
-
-table2<-rbind(extract_model_stats(m_hunt), 
+table1<-rbind(extract_model_stats(m_hunt), 
               extract_model_stats(m_hunt20), 
               extract_model_stats(m_hunt50), 
               extract_model_stats(m_gbif), 
               extract_model_stats(m_gbif20), 
               extract_model_stats(m_gbif50)
               ) %>% 
-            mutate(model = c("H1", "H2", "H3", "G1", "G2", "G3"),
-                   spatial_extent = rep(c("internal", "external (20 km)" , "external (50 km)"), 2)
+            mutate(model = c("H1", "H2", "H3"),
+                   spatial_extent = rep(c("within", "nearby (20 km)" , "nearby (50 km)"), 2)
                    ) 
-table2 <- table2 %>% select(model, spatial_extent, colnames(table2))
+table1 <- table1 %>% select(model, spatial_extent, colnames(table2))
 
-ft <- flextable(table2) %>% autofit() %>% theme_booktabs()
+ft <- flextable(table1) %>% autofit() %>% theme_booktabs()
 
-# Save Table 2 to word 
+# Save Table 7.1 to word 
 # save_as_docx(ft, path = "Table2.docx")
 
 
@@ -78,11 +73,8 @@ df.post <-
         as_tibble(coef(m_hunt20, probs = c(0.025, 0.125, 0.875, 0.975))$especie[,,2], rownames = "species") %>% mutate(pred = "External validation - 20km"),
         as_tibble(coef(m_hunt50, probs = c(0.025, 0.125, 0.875, 0.975))$especie[,,2], rownames = "species") %>% mutate(pred = "External validation - 50km")
         ) %>% 
-        mutate(source = "Hunting yield"),
-  rbind(as_tibble(coef(m_gbif, probs = c(0.025, 0.125, 0.875, 0.975))$especie[,,2],   rownames = "species") %>% mutate(pred = "Internal validation - site"),
-        as_tibble(coef(m_gbif20, probs = c(0.025, 0.125, 0.875, 0.975))$especie[,,2], rownames = "species") %>% mutate(pred = "External validation - 20km"),
-        as_tibble(coef(m_gbif50, probs = c(0.025, 0.125, 0.875, 0.975))$especie[,,2], rownames = "species") %>% mutate(pred = "External validation - 50km")) %>% 
-        mutate(source = "GBIF occurrence frequency")) %>%  
+        mutate(source = "Hunting yield")
+ ) %>%  
   mutate(species = sp_names[species]) %>% 
   mutate( pred = factor(pred, levels = sort_pred)) %>%
   mutate(species = fct_reorder(species, Estimate, .fun = mean))
@@ -115,8 +107,7 @@ post<-
         legend.position = "bottom",
         plot.title = element_blank(), 
         legend.title = element_blank()
-  )+
-  facet_grid( ~ source, scale = "free_x")
+  )
 
 # ggsave(file = "Figure5.png",
 #        post,
