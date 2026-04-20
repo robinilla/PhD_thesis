@@ -77,8 +77,8 @@ df_<-spatial_ %>%
   # remove columns that are not covariates of the model or have weird values
   dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, 
                    grow_mean, #weird values
-                   lc50, lc62, lc72, lc81, lc82,lc121, lc170#, # all values are 0
-  )) %>% #quito las bioregiones porque no las vamos a usar para el modelo
+                   lc50, lc62, lc72, lc81, lc82,lc121, lc170 # all values are 0
+  )) %>% 
   filter(dens<50) # remove silver polygons 
 
 df_<-df_[!is.na(df_$dens),] #Remove NA values from RV: it does not remove any value
@@ -199,7 +199,7 @@ grid_10km<-grid_10km %>% mutate(across(all_of(colnames(means)), ~ . - means[[cur
   mutate(across(all_of(colnames(means)), ~ . / sdss[[cur_column()]])) 
 
 library(modEvA) #MESS
-summary(DensityModel0_7) #Solo ponemos las variables que selecciona el modelo que son sobre las que vamos a hacer la prediccion
+summary(DensityModel0_7) 
 
 data_<-data %>% as.data.frame() %>% dplyr::select("x_cen", "y_cen",
                                                   "lc60", "lc30", "lc40", "Eucmean", "lc100", "lc70", "alt", "snow", "lc130")
