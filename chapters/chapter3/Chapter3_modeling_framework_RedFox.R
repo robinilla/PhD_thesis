@@ -13,7 +13,7 @@
 library(tidyverse)
 library(sf)
 #rm(list=ls())
-#Charge Red deer data
+#Charge Red fox data
 spatial<-st_read(dsn="wildRuminants_v5.gpkg", layer='RedFox')
 
 # IMPORTANT WARNING1: 
