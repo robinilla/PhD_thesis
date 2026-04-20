@@ -1,46 +1,55 @@
+# ---------------------------------------------
+#  PhD Thesis: Large-scale monitoring of wild mammal abundance: 
+#  modeling frameworks for structured and unstructured data
+#  Chapter 3. Modeling frameworks for abundance patterns of European wild mammals
+#  Author: Sonia Illanas
+#  Institution: Institute of Game and Wildlife Research
+#  Date of last modification: 13/02/2026
+# ---------------------------------------------
+## R version 4.5.2
+## tidyverse version: 2.0.0
+## spAbundance version: 0.2.2
+
 library(spAbundance)
 library(tidyverse)
 
-load(file="J:/IREC_Sonia/2_WIP/Report202512/2_modelResults/out_20251125_MCMCparamTest12_out4b_EU_largeSAMPLES.Rdata")
+load(file="out_20251125_MCMCparamTest12_out4b_EU_largeSAMPLES.Rdata")
 
-mcmc.model.params4<-function(modelo){# Supón que tienes un objeto tipo mcmc colapsado
-  collapsed <- mcmc(cbind(modelo$beta.samples, 
-                          modelo$theta.samples, 
-                          modelo$kappa.samples))# y es class == "mcmc"
+mcmc.model.params4<-function(model){
+  collapsed <- mcmc(cbind(model$beta.samples, 
+                          model$theta.samples, 
+                          model$kappa.samples))# y es class == "mcmc"
   
-  # Ver el número de iteraciones y parámetros
-  n_total <- niter(collapsed)  # Total de filas
+  # number of iterations and parameters
+  n_total <- niter(collapsed)  # total nrow
   n_chains <- 3
   n_iter_per_chain <- n_total / n_chains
   
-  # Verifica que la división es exacta
+  # 
   if (n_total %% n_chains != 0) stop("No se puede dividir equitativamente en 3 cadenas.")
   
-  # Divide en 3 cadenas
+  # Number of chains
   chain_list <- lapply(1:n_chains, function(i) {
     start <- ((i - 1) * n_iter_per_chain + 1)
     end <- i * n_iter_per_chain
     mcmc(as.matrix(collapsed)[start:end, ])
   })
   
-  # Reconstruye el mcmc.list
+  # Rebuilt mcmc.list
   samples_fixed <- mcmc.list(chain_list)
   
-  # Convertir a array compatible con bayesplot
+  # Convert to an array compatible with bayesplot
   mcmc_array <- as.array(samples_fixed)
   mcmc_array <- aperm(mcmc_array, perm = c(1, 3, 2))
   
-  # Verifica:
+  # Verify:
   # dim(mcmc_array)
   
-  # Ver los nombres de los parámetros disponibles
+  # parameters name available
   dimnames(mcmc_array)[[3]]<-gsub("\\(Intercept)", "Intercept", 
                                   gsub("cforest", "forest", 
                                        gsub("bio_12", "prec", dimnames(mcmc_array)[[3]])))
   params <- dimnames(mcmc_array)[[3]]
-  
-  # O selecciona solo algunos:
-  # params <- c("beta[1]", "beta[2]", ...)
   
   summary_stats<-tibble(params=params, 
                         Rhat=c(round(modelo$rhat$beta, 2), 
@@ -50,7 +59,7 @@ mcmc.model.params4<-function(modelo){# Supón que tienes un objeto tipo mcmc col
                               round(modelo$ESS$theta, 0), 
                               round(modelo$ESS$kappa, 0)))
   
-  # Generar traceplots por parámetro
+  # make traceplots for each parameter
   traceplots <- lapply(params, function(p) {
     bayesplot::mcmc_trace(mcmc_array, pars = p) +
       scale_x_continuous(expand = c(0, 0)) +
@@ -59,15 +68,13 @@ mcmc.model.params4<-function(modelo){# Supón que tienes un objeto tipo mcmc col
       theme_classic()+
       theme(legend.position = "none", 
             axis.text = element_text(family = "sans", size=7), 
-            axis.title.y = element_text(family = "sans", size=9)) #+ ggtitle(p)
+            axis.title.y = element_text(family = "sans", size=9))
   })
   
-  # Generar density plots por parámetro
+  # make density plots  for each parameter
   densityplots <- lapply(params, function(p) {
     bayesplot::mcmc_dens(mcmc_array, pars = p) + xlab(NULL) +
       scale_y_continuous(breaks = scales::pretty_breaks(n = 2))+
-      # scale_y_continuous(breaks = function(x) range(x), 
-      #                    labels = scales::number_format(accuracy = 1))+
       theme_classic()+
       theme(legend.position = "none")
   })
@@ -89,18 +96,18 @@ mcmc.model.params4<-function(modelo){# Supón que tienes un objeto tipo mcmc col
                y=y_pos)
   }
   
-  # Apilar verticalmente
+  # vertical visual placement
   trace_col <- patchwork::wrap_plots(traceplots, ncol = 1)
   dens_col  <- patchwork::wrap_plots(densityplots, ncol = 1)
   
-  # Combinar columnas: traceplots | density plots
+  # Combine columns: traceplots | density plots
   final_plot <- trace_col | dens_col
   final_plot
 }
 
 b<-mcmc.model.params4(out4b_EU)
 
-ggsave(filename = "J:/IREC_Sonia/2_WIP/Report202512/4_plots/Figure_Traceplots1.2.png",
+ggsave(filename = "FigureS5-2.1_Traceplots.png",
        plot = b,
        device = NULL,
        # path = "",
