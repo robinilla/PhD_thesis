@@ -95,11 +95,11 @@ df_<-df_ %>% dplyr::select(locationID, locality, country, NUTS, BR_todasr1, area
 
 #remove NA values from the dataset
 summary(df_)
-df_<-df_[!is.na(df_$bio_01),] #Remove NA values from the Red_set
-df_<-df_[!is.na(df_$snow),] #Remove NA values from the Red_set
-df_<-df_[!is.na(df_$hfp),] #Remove NA values from the Red_set
-df_<-df_[!is.na(df_$alt),] #Remove NA values from the Red_set
-df_<-df_[!is.na(df_$lc10),] #Remove NA values from the Red_set
+df_<-df_[!is.na(df_$bio_01),] #Remove NA values 
+df_<-df_[!is.na(df_$snow),] #Remove NA values 
+df_<-df_[!is.na(df_$hfp),] #Remove NA values 
+df_<-df_[!is.na(df_$alt),] #Remove NA values 
+df_<-df_[!is.na(df_$lc10),] #Remove NA values
 summary(df_)
 
 # Modeling phase
