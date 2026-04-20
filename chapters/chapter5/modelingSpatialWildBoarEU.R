@@ -4,7 +4,7 @@
 #  Chapter 5. Accounting for spatial dependence to smooth regional patterns of wild boar abundance across Europe
 #  Author: Sonia Illanas
 #  Institution: Institute of Game and Wildlife Research
-#  Date of last modification: 13/02/2026
+#  Date of last modification: 12/12/2025
 # ---------------------------------------------
 ## R version 4.5.1
 ## sf version: 1.0-21
