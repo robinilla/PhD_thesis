@@ -20,7 +20,7 @@ library(coda)        # v0.19-4.1
 library(scales)      # v1.4.0
 library(ggh4x)       # v0.3.1
 
-load(file = "~/Documentos/PhD/5_Estancia/2_WIP/2_Results/MSNM_20260312_spAbundance/msNmix_ms07_2_largerSamples.Rdata")
+load(file = "msNmix_ms07_2_largerSamples.Rdata")
 out <- out.ms07_2
 
 levels.sp <- c("C. pyrenaica",  "C. capreolus",  "C. elaphus", "D. dama", "O. aries", "R. pyrenaica", "S. scrofa")
@@ -93,7 +93,7 @@ trace_plot<-function(data_samples){
 
 traceAb <- trace_plot(samples_df)
 # trace
-# ggsave(file = "/FigureS4.1_TraceRhatESS_Abun.png",
+# ggsave(file = "/FigureS7-4.1_TraceRhatESS_Abun.png",
 #        traceAb,
 #        width = 25.2,
 #        height = 17.6,
@@ -153,7 +153,7 @@ stats$parameter<-factor(stats$parameter,
 
 traceDet <- trace_plot(samples_df)
 # trace
-# ggsave(file = "FigureS4.2_TraceRhatESS_Det.png",
+# ggsave(file = "FigureS7-4.2_TraceRhatESS_Det.png",
 #        traceDet,
 #        width = 25.2,
 #        height = 17.6,
