@@ -1,10 +1,10 @@
 # ---------------------------------------------
 #  PhD Thesis: Large-scale monitoring of wild mammal abundance: 
 #  modeling frameworks for structured and unstructured data
-#  Chapter 3. Modeling frameworks for abundance patterns of European wild mammals
+#  Chapter 5. Accounting for spatial dependence to smooth regional patterns of wild boar abundance across Europe
 #  Author: Sonia Illanas
 #  Institution: Institute of Game and Wildlife Research
-#  Date of last modification: 13/02/2026
+#  Date of last modification: 12/12/2026
 # ---------------------------------------------
 ## R version 4.5.2
 ## tidyverse version: 2.0.0
