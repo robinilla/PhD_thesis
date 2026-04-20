@@ -1,4 +1,4 @@
-# Chapter 3: 3. Modeling Frameworks for Abundance Patterns of European Wild Mammals
+# Chapter 3: Modeling Frameworks for Abundance Patterns of European Wild Mammals
 
 
 Based on the reports:
