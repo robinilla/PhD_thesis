@@ -88,7 +88,7 @@ load(file = "~/msNmix_ms07_2_largerSamples.Rdata")
 
 # internal comparisons
 # -----------------------
-load (file = "~/0_DataPrepared/modelingData/data.internal.Rdata")
+load (file = "~/0_DataPrepared/modelingData/data.within.Rdata")
 
 hb.pred <- scale_covs(hb)
 
@@ -154,7 +154,7 @@ performance::r2_bayes(m_hunt)
 # Prepare data - external validation 20 km
 # 20km
 # -------------------------------
-load(file = "~/0_DataPrepared/modelingData/data.external20.Rdata")
+load(file = "~/0_DataPrepared/modelingData/data.nearby20.Rdata")
 
 hb.pred <- scale_covs(hb20)
 
@@ -224,7 +224,7 @@ performance::r2_bayes(m_hunt20)
 # Prepare data - external validation 20 km
 # 50km
 # -------------------------------
-load(file = "~/modelingData/data.external50.Rdata")
+load(file = "~/modelingData/data.nearby50.Rdata")
 
 hb.pred <- scale_covs(hb50)
 
