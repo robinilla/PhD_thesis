@@ -20,7 +20,7 @@ The thesis consists of the following chapters:
 4. Chapter 4 - Evaluation of modeling approaches to account for hunting data variability across large spatial scales
 5. Chapter 5 - Accounting for spatial dependence to smooth regional patterns of wild boar abundance across Europe
 6. Chapter 6 - Assessment of bivariate relationships between spatial patterns: revisiting the L index for wildlife management and conservation
-7. Chapter 7 -What a camera trap network reveals about wild ungulate communities in Spain: large-scale monitoring using hierarchical N-mixture models
+7. Chapter 7 - Large-scale modeling of wild ungulate relative abundance from a national camera trap network
 8. Discusion & Conclusions
 9. References
 10. Acknowledges
