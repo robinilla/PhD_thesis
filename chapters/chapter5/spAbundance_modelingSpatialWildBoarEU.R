@@ -1,6 +1,11 @@
-## Institution: Institute for Game and Wildife Research
-## data Author: Sonia Illanas
-## Date - last modification: 12/10/2025 (mm/dd/yyyy)
+# ---------------------------------------------
+#  PhD Thesis: Large-scale monitoring of wild mammal abundance: 
+#  modeling frameworks for structured and unstructured data
+#  Chapter 5. Accounting for spatial dependence to smooth regional patterns of wild boar abundance across Europe
+#  Author: Sonia Illanas
+#  Institution: Institute of Game and Wildlife Research
+#  Date of last modification: 13/02/2026
+# ---------------------------------------------
 ## R version 4.5.1
 ## sf version: 1.0-21
 ## tidyverse version: 2.0.0
