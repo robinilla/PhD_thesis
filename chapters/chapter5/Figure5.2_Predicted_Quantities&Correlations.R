@@ -1,57 +1,38 @@
-## ---------------------
-## Author: First author name
-## Date: 02/10/2025 (mm/dd/yyyy)
-## ---------------------
+# ---------------------------------------------
+#  PhD Thesis: Large-scale monitoring of wild mammal abundance: 
+#  modeling frameworks for structured and unstructured data
+#  Chapter 5. Accounting for Spatial Dependence to Smooth
+#  Regional Patterns of Wild Boar Abundance across Europe
+#  Author: Sonia Illanas
+#  Institution: Institute of Game and Wildlife Research
+#  Date of last modification: 12/12/2025
+# ---------------------------------------------
+## R version 4.5.2
+## tidyverse version: 2.0.0
+## sf version: 1.0-21
+## ggbreak version: 0.1.6
+## tmap version: 4.2
+## ggh4x version: 0.3.1
+## corrplot version: 0.95
+## grDevices version: 4.5.2
+## Hmisc version: 5.2-4
+
 library(sf)
 library(tidyverse)
 library(ggbreak) 
 library(tmap)
 tmap::tmap_mode("view")
 
-# ---------------------------------
-# lo he quitado porque creo que estamos prediciendo fuera de muchas zonas donde no tenemos datos
-# ---------------------------------
-# load the data to know HYs sum
-# data<-st_read("J:/IREC_Sonia/2_WIP/Report202512/1_scripts/data/dataModeling.gpkg", "wildBoar_test2") %>% 
-#   filter(locationID!="HR") %>% 
-#   rename(Eucmean=EucalyptusSpp_mean, hfp=hfp_v3_mean, area=area_km2) %>% 
-#   mutate(Eucmean=ifelse(is.na(Eucmean), 0, ifelse(Eucmean<0, 0.01, Eucmean)), 
-#          snow_mean=ifelse(is.na(snow_mean), 0, snow_mean))
-# data<-st_transform(data,
-#                    st_crs("+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=km +no_defs"))
-# data <- data %>% mutate(Var1=round(st_coordinates(st_point_on_surface(geom))[,1], digits=6),
-#                         Var2=round(st_coordinates(st_point_on_surface(geom))[,2], digits=6))
-# 
-# colSums(is.na(st_drop_geometry(data))) > 0 # it says which cols has NA values 
-# 
-# # remove any NA values that there is still in the dataset
-# data<-data[!is.na(data$grow2_mean),]        # Remove NA values from the dataset
-# data<-data[!is.na(data$elev_mean),]         # Remove NA values from the dataset
-# data<-data[!is.na(data$hfp),]               # Remove NA values from the dataset
-# data<-data[!is.infinite(data$hMaxWb),]      # Remove -Inf values from the RV
-# 
-# colnames(data)<-gsub("_mean", "", colnames(data))
-# colnames(data)[39:74]<-gsub("_", "", colnames(data)[39:74])
-# 
-# # remove duplicated coordinates, that is, there are overlapping polygons
-# # we need to remove them for making the model. Duplicated locations will
-# # cause problems (I mean, i won't allow to run the model)
-# data<-data %>% distinct(Var1, Var2, .keep_all = TRUE)
-# 
-# data.bm<-data %>% tibble() %>% select(hMaxWbZero, area)  %>% rename(counts=hMaxWbZero)
-# data.bm<-data.bm[!(data.bm$counts/data.bm$area>30),]  
-# --------------------------------- 
-
 # load 10km x 10km spatial predictions
 grid10km_env<-
-  st_read(dsn = "J:/IREC_Sonia/2_WIP/Report202512/2_modelResults/outSpeciesPredictions_2025December.gpkg", 
+  st_read(dsn = "outSpeciesPredictions_2025December.gpkg", 
           layer="out_20251202_grid10km_environmental2")
 grid10km_spt<-
-  st_read(dsn = "J:/IREC_Sonia/2_WIP/Report202512/2_modelResults/outSpeciesPredictions_2025December.gpkg", 
+  st_read(dsn = "outSpeciesPredictions_2025December.gpkg", 
           layer="out_20251202_grid10km")
 
 wb_model<-
-  st_read(dsn="J:/IREC_Sonia/2_WIP/Report_202206/2_GIS/europe_ruminants/predicciones_20220811.gpkg", 
+  st_read(dsn="predicciones_20220811.gpkg", 
           layer="DensityModel_grid10km_WildBoar_BR_final4_MESS_IC_v1.1")
 
 wb_model<-st_transform(wb_model, 
@@ -59,10 +40,10 @@ wb_model<-st_transform(wb_model,
 wb_model <- wb_model %>% mutate(Var1=round(x_cen/1000, digits=3),
                                 Var2=round(y_cen/1000, digits=3))
 
-crop<-st_read("J:/IREC_Sonia/2_WIP/Report202512/3_GIS_base/wb_outside_range_clean3.shp") %>% select(geometry) %>% mutate(ID=1)
+crop<-st_read("wb_outside_range_clean3.shp") %>% select(geometry) %>% mutate(ID=1)
 tm_shape(crop) + tm_fill()
 
-countries<-st_read("F:/IREC/PhD/D/Docs/GIS_base/Lim_Admon_EU/NUTS_RG_01M_2021_3035_LEVL_0.shp/NUTS_RG_01M_2021_3035_LEVL_0.shp")
+countries<-st_read("NUTS_RG_01M_2021_3035_LEVL_0.shp")
 countries<-countries %>% select(NUTS_ID:NUTS_NAME)
 grid10km_env_pt<-st_centroid(st_transform(grid10km_env, 3035))
 grid10km_spt_pt<-st_centroid(st_transform(grid10km_spt, 3035))
@@ -93,20 +74,13 @@ a <- tibble(
   model   = c("environmental", "spatial", "lastReport")
 )
 
-# ggplot(a, aes(x = model, y = median, colour = model)) +
-#   geom_point(size = 3) +
-#   geom_crossbar(aes(ymin = lowCI, ymax = highCI),
-#                 width = 0.2, alpha = 0.3) +
-#   ylab("sum of the predicted harvested wild boar")+
-#   theme_classic()
-
 a$model<-factor(a$model, levels=c("environmental", "spatial", "lastReport"), labels = c("ENVIRONMENTAL", "SPATIAL", "ENETWILD'22"))
 
-# Define los límites de los tramos del break
+# Define break limits
 low_end   <- 60000000
 high_start <- 150000000
 
-# Calcula un tope superior razonable (puedes ajustar según tus datos)
+# maximum value 
 y_max <- max(a$highCI, a$median, na.rm = TRUE)
 
 plot.a<-
@@ -115,16 +89,15 @@ ggplot(a, aes(x = model, y = median, colour = model)) +
                 width = 0.2, alpha = 0.8, linewidth = 0.6) +
   geom_point(size = 1.5) +
   scale_colour_manual(values = c("#b3cde0", "#005b96", "#011f4b")) +
-  # Define los breaks manualmente: 20M en el primer segmento, 10M en el segundo
+  # Define manually breaks
   scale_y_continuous(
     breaks = c(
       seq(0, low_end, by = 20000000),               # 0, 20M, 40M, 60M
       seq(high_start, y_max, by = 10000000)         # 154M, 164M, 174M, ...
     ),
     labels = scales::label_number(scale = 1e-6, suffix = "M"),
-    minor_breaks = NULL                              # opcional: sin minor ticks
+    minor_breaks = NULL                              
   ) +
-  # break entre 60M y 154M; 'scales' controla la compresión visual del hueco
   scale_y_break(c(low_end, high_start), scales = 0.1) +
   ylab("Total predicted \n harvested wild boar") +
   theme_classic() +
@@ -140,7 +113,7 @@ ggplot(a, aes(x = model, y = median, colour = model)) +
     axis.line.y.right  = element_blank()
     
   )
-ggsave(filename = "J:/IREC_Sonia/2_WIP/Report202512/4_plots/Figure_SumQuantityPredicted2.1.png",
+ggsave(filename = "Figure_SumQuantityPredicted2.1.png",
        plot = plot.a,
        device = NULL,
        scale = 1,
@@ -181,14 +154,11 @@ plot.b<-
                 width = 0.2, 
                 alpha = 0.8,
                 linewidth=0.6) +
-  # geom_hline(yintercept=sum(data.bm$counts), "grey50", lty=3)+
   geom_point(size = 1.5) +
   scale_colour_manual(values=c("#b3cde0", "#005b96", "#011f4b")) +
   scale_y_continuous(labels = scales::label_number(scale = 1e-6, suffix = "M"), 
                      breaks = seq(0, 6500000, 1000000)
-                     # limits = c(0, 20000000)
   )+
-  # scale_y_break(c(3000000, 5000000), scales = 1) +
   ylab("Total predicted \n harvested wild boar")+
   theme_classic()+
   theme(legend.position = "none", 
@@ -203,7 +173,7 @@ plot.b<-
   facet_wrap(~country, scales="free_y")
 
 plot.b
-ggsave(filename = "J:/IREC_Sonia/2_WIP/Report202512/4_plots/Figure_SumQuantityPredictedb_1.1.png",
+ggsave(filename = "Figure5.2A_SumQuantityPredictedb_1.1.png",
        plot = plot.b,
        device = NULL,
        scale = 1,
@@ -214,7 +184,7 @@ ggsave(filename = "J:/IREC_Sonia/2_WIP/Report202512/4_plots/Figure_SumQuantityPr
 
 library(patchwork)
 plots<-plot.a | plot.b
-ggsave(filename = "J:/IREC_Sonia/2_WIP/Report202512/4_plots/Figure_SumQuantityPredicted_3.1.png",
+ggsave(filename = "Figure5.2A_SumQuantityPredicted_3.1.png",
        plot = plots,
        device = NULL,
        scale = 1,
@@ -242,7 +212,7 @@ df.g<-df %>% select(env, spt, wb_last) %>% mutate(wb_last=wb_last*100) %>% renam
                                                                                 SPATIAL=spt, `ENETWILD'22`=wb_last)
 M<-cor(df.g, method = "spearman")
 M.p<-cor.mtest(df.g, conf.level=0.95)
-png(filename = "J:/IREC_Sonia/2_WIP/Report202512/4_plots/Figure_Correlation.png",
+png(filename = "Figure5.2B_Correlation.png",
        width=8,
        height=6,
        units="cm",
@@ -279,7 +249,7 @@ p.fr<-cor.mtest(df.fr, conf.level=0.95)
 p.it<-cor.mtest(df.it, conf.level=0.95)
 p.pl<-cor.mtest(df.pl, conf.level=0.95)
 
-png(filename = "J:/IREC_Sonia/2_WIP/Report202512/4_plots/Figure_Correlation.plot.es.png",
+png(filename = "Figure5.2B_Correlation.plot.es.png",
     width=8,
     height=6,
     units="cm",
@@ -301,7 +271,7 @@ corrplot::corrplot(M.es,
                    cl.ratio=0.5)
 dev.off()
 
-png(filename = "J:/IREC_Sonia/2_WIP/Report202512/4_plots/Figure_Correlation.plot.pl.png",
+png(filename = "Figure5.2B_Correlation.plot.pl.png",
     width=8,
     height=6,
     units="cm",
@@ -323,7 +293,7 @@ corrplot::corrplot(M.pl,
                    cl.ratio=0.5)
 dev.off()
 
-png(filename = "J:/IREC_Sonia/2_WIP/Report202512/4_plots/Figure_Correlation.plot.fr.png",
+png(filename = "Figure5.2B_Correlation.plot.fr.png",
     width=8,
     height=6,
     units="cm",
@@ -346,7 +316,7 @@ corrplot::corrplot(M.fr,
 dev.off()
 
 
-png(filename = "J:/IREC_Sonia/2_WIP/Report202512/4_plots/Figure_Correlation.plot.it2.png",
+png(filename = "Figure5.2B_Correlation.plot.it2.png",
     width=8,
     height=6,
     units="cm",
@@ -367,13 +337,3 @@ corrplot::corrplot(M.it,
                    cl.offset = 0.2,
                    cl.ratio=0.5)
 dev.off()
-
-
-# 
-
-# tm_shape(wb_model[29443:29455,])+
-#   tm_fill("Pred_Red")+
-# tm_shape(grid10km_env[1:10,])+
-#   tm_fill("spA.m4b")+
-# tm_shape(grid10km_spt[1:10,])+
-#   tm_fill("spA.m4b")
