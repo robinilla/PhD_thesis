@@ -1,5 +1,5 @@
 # Chapter 7
-What a camera trap network reveals about wild ungulate communities in Spain: large-scale monitoring using hierarchical N-mixture models
+Large-scale modeling of wild ungulate relative abundance from a national camera trap network
 
 Code Repository:
-https://github.com/robinilla/CT-multispecies-model
+https://github.com/robinilla/PhD_thesis/tree/main/chapters/chapter7
