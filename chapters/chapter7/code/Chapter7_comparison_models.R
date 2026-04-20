@@ -1,7 +1,6 @@
 # -----------------------------------------
-# From the work: Illanas, et al (in prep). What a camera trap network reveals 
-# about wild ungulate communities in Spain: large-scale monitoring using 
-# hierarchical N-mixture models
+# From the work: Illanas, et al (in prep). Large-scale modeling of wild ungulate 
+# relative abundance from a national camera trap network
 # -----------------------------------------
 # script: comparison_models.R
 # This script was used for making the multispecies models
@@ -27,7 +26,7 @@ rm(list=ls())
 set.seed(1993)
 
 # load data (needed for standardization validation covariates values)
-load(file = "~/Documentos/PhD/5_Estancia/2_WIP/0_DataPrepared/modelingData/data.model.Rdata")
+load(file = "0_DataPrepared/modelingData/data.model.Rdata")
 # str(data.model)
 
 scale_covs <- function(df) {
@@ -84,12 +83,12 @@ data_prep <- function(data, type = c("hunt", "gbif")) {
 
 
 # load model results for making predictions
-load(file = "~/Documentos/PhD/5_Estancia/2_WIP/2_Results/MSNM_20260312_spAbundance/msNmix_ms07_2_largerSamples.Rdata")
+load(file = "~/msNmix_ms07_2_largerSamples.Rdata")
 
 
 # internal comparisons
 # -----------------------
-load (file = "~/Documentos/PhD/5_Estancia/2_WIP/0_DataPrepared/modelingData/data.internal.Rdata")
+load (file = "~/0_DataPrepared/modelingData/data.internal.Rdata")
 
 hb.pred <- scale_covs(hb)
 
@@ -147,37 +146,15 @@ m_hunt <- brm(
 )
 # save(m_hunt, file = "m_hunt_WITTHOUT0.Rdata")
 
-# gbif data
-df_gbif <- hb.pred %>% data_prep(type = "gbif") 
-
-df_gbif$obs_z <- (df_gbif$value_obs - mean(df_gbif$value_obs, na.rm=TRUE)) / sd(df_gbif$value_obs, na.rm=TRUE)
-
-m_gbif <- brm(
-  log(lambda_pred) | se(se_log, sigma = TRUE) ~ obs_z + (1 + obs_z || species),
-  data = df_gbif, family = gaussian(),
-  prior = c(prior(normal(0, 2), class = "b"), 
-            prior(exponential(1), class = "sd")),
-  control = list(adapt_delta = 0.99,
-                 max_treedepth = 15), 
-  cores = 12, 
-  threads = threading(4),
-  chains = 3,
-  thin = 1,
-  iter = 5000, 
-  warmup = 1000, 
-  backend = "cmdstanr"
-)
-# save(m_gbif, file = "m_gbif.Rdata")
-
 performance::r2_bayes(m_hunt)
-performance::r2_bayes(m_gbif)
+
 
 # -------------------------------
 
 # Prepare data - external validation 20 km
 # 20km
 # -------------------------------
-load(file = "~/Documentos/PhD/5_Estancia/2_WIP/0_DataPrepared/modelingData/data.external20.Rdata")
+load(file = "~/0_DataPrepared/modelingData/data.external20.Rdata")
 
 hb.pred <- scale_covs(hb20)
 
@@ -239,31 +216,7 @@ m_hunt20 <- brm(
 )
 # plot(m_hunt20)
 # save(m_hunt20, file = "m_hunt20WITHOUT0.Rdata")
-
-# gbif data
-df_gbif20 <- hb.pred.s %>% data_prep(type = "gbif") 
-df_gbif20$obs_z <- (df_gbif20$value_obs - mean(df_gbif20$value_obs, na.rm=TRUE)) / sd(df_gbif20$value_obs, na.rm=TRUE)
-
-m_gbif20 <- brm(
-  log(lambda_pred) | se(se_log, sigma = TRUE) ~ obs_z + (1 + obs_z || species),
-  data = df_gbif20, family = gaussian(),
-  prior = c(prior(normal(0, 2), class = "b"), 
-            prior(exponential(1), class = "sd")),
-  control = list(adapt_delta = 0.99, 
-                 max_treedepth = 15),
-  cores = 12, 
-  threads = threading(4),
-  chains = 3,
-  thin = 1,
-  iter = 5000, 
-  warmup = 1000, 
-  backend = "cmdstanr"
-)
-# save(m_gbif20, file = "m_gbif20.Rdata")
-
-
 performance::r2_bayes(m_hunt20)
-performance::r2_bayes(m_gbif20)
 
 # -------------------------------
 
@@ -271,7 +224,7 @@ performance::r2_bayes(m_gbif20)
 # Prepare data - external validation 20 km
 # 50km
 # -------------------------------
-load(file = "~/Documentos/PhD/5_Estancia/2_WIP/0_DataPrepared/modelingData/data.external50.Rdata")
+load(file = "~/modelingData/data.external50.Rdata")
 
 hb.pred <- scale_covs(hb50)
 
@@ -335,29 +288,5 @@ m_hunt50 <- brm(
 )
 # save(m_hunt50, file = "m_hunt50.Rdata")
 
-
-# gbif data
-df_gbif50 <- hb.pred.s %>% data_prep(type = "gbif") 
-df_gbif50$obs_z <- (df_gbif50$value_obs - mean(df_gbif50$value_obs, na.rm=TRUE)) / sd(df_gbif50$value_obs, na.rm=TRUE)
-
-m_gbif50 <- brm(
-  log(lambda_pred) | se(se_log, sigma = TRUE) ~ obs_z + (1 + obs_z || species),
-  data = df_gbif50, family = gaussian(),
-  prior = c(prior(normal(0, 2), class = "b"), 
-            prior(exponential(1), class = "sd")),
-  control = list(adapt_delta = 0.99, 
-                 max_treedepth = 15),
-  cores = 12, 
-  threads = threading(6),
-  chains = 3,
-  thin = 1,
-  iter = 5000, 
-  warmup = 1000,
-  backend = "cmdstanr", 
-  save_pars = save_pars(all = TRUE)
-)
-# save(m_gbif50, file = "m_gbif50.Rdata")
-
 performance::r2_bayes(m_hunt50)
-performance::r2_bayes(m_gbif50)
 # -------------------------------
