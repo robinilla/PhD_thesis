@@ -1,9 +1,21 @@
+# ---------------------------------------------
+#  PhD Thesis: Large-scale monitoring of wild mammal abundance: 
+#  modeling frameworks for structured and unstructured data
+#  Chapter 3. Modeling frameworks for abundance patterns of European wild mammals
+#  Author: Sonia Illanas
+#  Institution: Institute of Game and Wildlife Research
+#  Date of last modification: 13/02/2026
+# ---------------------------------------------
+## R version 4.5.2
+## tidyverse version: 2.0.0
+## sf version: 1.0-21
+## pscl version: 1.5.9
+
 library(tidyverse)
 library(sf)
-# rm(list=ls())
-setwd("/home/vant/Documentos/PhD/HB_chapter/")
-
 library(pscl)
+# rm(list=ls())
+
 stepwise_zeroinfl_alternate <- function(data, response,
                                         count_fixed = character(0),
                                         count_candidates,
@@ -19,7 +31,6 @@ stepwise_zeroinfl_alternate <- function(data, response,
   start_in  <- match.arg(start_in)
   criterion <- match.arg(criterion)
   
-  # ---------- helpers ----------
   rhs <- function(fixed, vars) {
     v <- c(fixed, vars)
     if (length(v) == 0) "1" else paste(v, collapse = " + ")
@@ -62,7 +73,7 @@ stepwise_zeroinfl_alternate <- function(data, response,
   score <- function(fit)
     if (criterion == "AIC") fit$AIC else fit$BIC
   
-  # ---------- modelo inicial ----------
+  # ---------- initial model  ----------
   current_count <- character(0)
   current_zi    <- character(0)
   
@@ -70,7 +81,7 @@ stepwise_zeroinfl_alternate <- function(data, response,
   current_fit  <- fit_one(current_form)
   
   if (!current_fit$ok || !current_fit$converged || !is.finite(score(current_fit)))
-    stop("El modelo inicial no es válido.")
+    stop("Initial model is not valid.")
   
   history <- list()
   all_tried <- list()
@@ -83,7 +94,7 @@ stepwise_zeroinfl_alternate <- function(data, response,
     steps <- steps + 1
     if (steps > max_steps) break
     
-    # ---------- generar candidatos ----------
+    # ---------- generate candidates ----------
     if (mode == "zi") {
       pool <- setdiff(zi_candidates, current_zi)
       if (length(pool) == 0) break
@@ -111,7 +122,7 @@ stepwise_zeroinfl_alternate <- function(data, response,
       })
     }
     
-    # ---------- tabla del step ----------
+    # ---------- step table  ----------
     step_df <- do.call(rbind, lapply(candidates, function(x) {
       data.frame(
         step = steps,
@@ -128,11 +139,11 @@ stepwise_zeroinfl_alternate <- function(data, response,
       )
     }))
     
-    # ---------- FILTRADO CRÍTICO ----------
+    # ---------- FILTERING  ----------
     valid <- step_df$converged & is.finite(step_df[[criterion]])
     
     if (!any(valid)) {
-      # no hay modelos válidos → parar
+      # there isn't valid models: stop
       break
     }
     
@@ -141,13 +152,13 @@ stepwise_zeroinfl_alternate <- function(data, response,
     
     best_row <- step_df_valid[1, , drop = FALSE]
     
-    # recuperar el fit correcto
+    # recover correct fit
     idx <- which(sapply(candidates, function(x)
       x$add == best_row$added && x$part == best_row$part))[1]
     
     best_fit <- candidates[[idx]]$fit
     
-    # ---------- comprobar mejora ----------
+    # ---------- check score ----------
     current_score <- score(current_fit)
     best_score    <- score(best_fit)
     
@@ -167,11 +178,11 @@ stepwise_zeroinfl_alternate <- function(data, response,
     all_tried[[steps]] <- candidates
     
     if (!is.finite(best_score) || improve < min_improve) {
-      # no mejora → parar
+      # score doesn't improve: stop
       break
     }
     
-    # ---------- aceptar ganador ----------
+    # ---------- acept bestmodel: best score----------
     if (mode == "zi") {
       current_zi <- c(current_zi, best_row$added)
     } else {
@@ -181,11 +192,10 @@ stepwise_zeroinfl_alternate <- function(data, response,
     current_form <- make_formula(current_count, current_zi)
     current_fit  <- best_fit
     
-    # alternar componente
     mode <- if (mode == "zi") "count" else "zi"
   }
   
-  # ---------- salida ----------
+  # ---------- output ----------
   all_steps_df <- do.call(rbind, lapply(history, `[[`, "step_table"))
   
   list(
@@ -218,21 +228,19 @@ data_sp<-st_read(dsn="scripts/data/predicciones_20220811.gpkg",
 sp<-data_sp %>%
   mutate(lc10=lc_10_sum/lc_10_count*100, lc11=lc_11_sum/lc_11_count*100, lc12=lc_12_sum/lc_12_count*100, lc20=lc_20_sum/lc_20_count*100, lc30=lc_30_sum/lc_30_count*100, lc40=lc_40_sum/lc_40_count*100, lc50=lc_50_sum/lc_50_count*100, lc60=lc_60_sum/lc_60_count*100, lc61=lc_61_sum/lc_61_count*100, lc62=lc_62_sum/lc_62_count*100, lc70=lc_70_sum/lc_70_count*100, lc71=lc_71_sum/lc_71_count*100, lc72=lc_72_sum/lc_72_count*100, lc80=lc_80_sum/lc_80_count*100, lc81=lc_81_sum/lc_81_count*100, lc82=lc_82_sum/lc_82_count*100, lc90=lc_90_sum/lc_90_count*100, lc100=lc_100_sum/lc_100_count*100, lc110=lc_110_sum/lc_110_count*100,lc120=lc_120_sum/lc_120_count*100,lc121=lc_121_sum/lc_121_count*100,lc122=lc_122_sum/lc_122_count*100,lc130=lc_130_sum/lc_130_count*100,lc140=lc_140_sum/lc_140_count*100,lc150=lc_150_sum/lc_150_count*100,lc152=lc_152_sum/lc_152_count*100,lc153=lc_153_sum/lc_153_count*100,lc160=lc_160_sum/lc_160_count*100,lc170=lc_170_sum/lc_170_count*100,lc180=lc_180_sum/lc_180_count*100,lc190=lc_190_sum/lc_190_count*100,lc200=lc_200_sum/lc_200_count*100,lc201=lc_201_sum/lc_201_count*100,lc202=lc_202_sum/lc_202_count*100,lc210=lc_210_sum/lc_210_count*100,lc220=lc_220_sum/lc_220_count*100) %>%
   dplyr::select(!matches("_cou") & !matches("_sum")) %>%
-  #quito variables que no vaya a usar en el modelo
-  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, #species, #me cargo variables que no necesito para el modelo
-                   grow_mean, #la variable grow tiene datos raros, as? que la voy a eliminar de nuestro set de datos
-                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,#, #Me cargo variables lc que en el summary son todo 0
-                   #BR_todasr1
+   # remove columns that are not covariates of the model or have weird values
+  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, 
+                   grow_mean, 
+                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,
                    "individualCount...39", "individualCount...51"
-  )) %>% #quito las bioregiones porque no las vamos a usar para el modelo
-  filter(dens<50) %>%  #tres poligonos de >Spain con areas muy muy muy muy small
-  # filter(dens>0 & dens<50)
+  )) %>%
+  filter(dens<50) %>% # remove silver polygons 
   select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), dens, dens_r_trans,
          matches("bio"), alt, snow, sun, Eucmean, hfp,
          matches("lc"),
          x_cen, y_cen)
 
-sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #Como para wild boar transformamos la variable de Eucmean para eliminar los valores negativos por valores de0 muy peque?os
+sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #remove negative values from Eucmean
 sp<-sp[!is.na(sp$dens),] #Remove NA values from RV: it does not remove any value
 
 #Modeling phase
@@ -250,12 +258,12 @@ sp<-sp[!is.na(sp$lc10),] #Remove NA values from the spset
 data<-sp  %>% mutate(across(all_of(vars_std),~ as.numeric(scale(.))))
 summary(data)
 
-#1.1 Creamos data set de calibrado y de validacion (80% / 20%)
+#1.1 Calibration & validation dataset (80% / 20%)
 set.seed(500)
 s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data_val <- data[-s_model,]; st_geometry(data_tra)<-NULL; st_geometry(data_val)<-NULL
 
 #2.0 VIF <2
-#2.1 seleccionamos variables para el vif, para eso miramos como es la distribucion de las variables
+#2.1 select covariates for the VIF
 # hist(data_tra$Eucmean)
 # hist(data_tra$alt)
 # hist(data_tra$snow)
@@ -291,14 +299,14 @@ s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data
 # hist(data_tra$lc210) #
 # hist(data_tra$lc220) #
 
-#2.1 hacemos el vif
+#2.1 vif
 variables<-data_tra %>% dplyr::select(matches("bio_"), alt, snow, Eucmean,lc10, lc11, lc12, lc30, lc40, lc60, lc70, lc90,
                                       lc100,
                                       lc130, x_cen, y_cen)
 resultado.vif0<-usdm::vifstep(variables, th=2); resultado.vif0
 
 
-#2.2) Density Models: binomial negativa necesita que sea un numero entero, por eso se ha transformado la variable densidad *10000
+#2.2) Density Models: negative binomial need integer -> transform density *10000
 #ZINB
 count_vars <- c("bio_02","bio_03", "bio_15","lc10","lc30","lc40","lc60","lc70","lc100")
 zi_vars <- count_vars
@@ -306,14 +314,14 @@ zi_vars <- count_vars
 res <- stepwise_zeroinfl_alternate(
   data = data_tra,
   response = "dens_r_trans",
-  count_fixed = c("x_cen","y_cen"),              # SIEMPRE dentro del count
+  count_fixed = c("x_cen","y_cen"),              # ALWAYS in the count side 
   count_candidates = count_vars,
-  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") si también los quieres fijos en ZI
+  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") to include as fixed in the ZI
   zi_candidates = zi_vars,
-  start_in = "zi",                               # como tu gráfico: primero inflado, luego conteo
+  start_in = "zi",                               
   dist = "negbin",
   criterion = "AIC",
-  min_improve = 0                                # pon 2 si quieres “solo si mejora >2”
+  min_improve = 0                                # minimum value for model improvment 
 )
 
 res$best_formula
@@ -324,12 +332,7 @@ AlpineIbex_DensityModel<-res$best_model
 
 #2.3) Calibration plots  validation data
 data_val<-data_val %>%
-  mutate(Pred_model = as.integer(predict(AlpineIbex_DensityModel, data_val,type = "response"))) %>% #predecir zeroinfl
-  #predecir hurdle
-  # mutate(p_hat = predict(mh, data_val, type = "zero"),
-  #        mu_hat=predict(mh, data_val, type="count"),
-  #        # y_hat=p_pos*mu_pos) %>%
-  #        y_hat = predict(mh, data_val, type="response")) %>%
+  mutate(Pred_model = as.integer(predict(AlpineIbex_DensityModel, data_val,type = "response"))) %>%
   mutate(Pred_Red = Pred_model/10000) ; range(unique(data_val$Pred_Red))
 
 data_pos<-data_val %>% filter(dens>0)
@@ -353,26 +356,7 @@ ggplot(cal_tot, aes(x = pred_mean, y = obs_mean)) +
     strip.background = element_rect(fill = "grey90"),
     strip.text = element_text(face = "bold")
   )
-# s_class <- cut2(data_val$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean <- as.matrix(tapply(data_val$Pred_Red, s_class, mean)) # calculating mean values for predicted
-# y_mean <- as.matrix(tapply(data_val$dens, s_class, mean)) # calculating mean values for observed
-# # corbr1<-cor.test(data_val$Pred_Red, data_val$dens)
-# data_val_w0<-data_val %>%filter(dens_r_trans>0)
-# s_class_w0 <- cut2(data_val_w0$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean_w0 <- as.matrix(tapply(data_val_w0$Pred_Red, s_class_w0, mean)) # calculating mean values for predicted
-# y_mean_w0 <- as.matrix(tapply(data_val_w0$dens, s_class_w0, mean)) # calculating mean values for observed
-
-# cpE<-rbind(data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data")),
-#            data.frame(s_mean=s_mean_w0, y_mean=y_mean_w0, Type=as.factor("Data without 0")))
-# ggplot(cpE, aes(x=s_mean, y=y_mean, col=Type, shape=Type))+
-#   geom_point(size=4)+ scale_colour_grey()+ scale_shape_manual(values=c(16, 17))+
-#   geom_abline(col="red", lty=2, cex=0.5)+
-#   theme_bw()+
-#   # xlim(0,max(s_mean_w0, max(na.omit(y_mean_w0))))+
-#   # ylim(0,max(max(na.omit(y_mean_w0)), s_mean_w0))+
-#   ylab("Observed Alpine ibex hunted bag density")+xlab("Predicted")+
-#   theme(plot.title = element_text(hjust = 0.5))
-# 
+ 
 # #3.0) Spatial layer: 10x10km grid
 grid_10km<-st_read(dsn="scripts/data/data_constrained_sp_20220902.gpkg", layer='grid_AlpineIbex') %>% dplyr::select(-Bioregion) %>%
   rename(Bioregion=BR_T10, NUTS=NUT, Eucmean=Eucalyptus) %>%
@@ -392,14 +376,14 @@ colnames(grid_10km)[9:17]<-gsub("_", "_0", colnames(grid_10km)[9:17])
 
 data %>% colnames()
 means<-sp %>% as_tibble() %>%
-  select(16:70) %>%          # selecciona columnas
+  select(16:70) %>%          # select columns
   summarise(across(everything(), ~ mean(.x, na.rm = TRUE)))
 sdss<-sp %>% as_tibble() %>%
-  select(16:70) %>%          # selecciona columnas
+  select(16:70) %>%          # select columns
   summarise(across(everything(), ~ sd(.x, na.rm = TRUE)))
 
 library(modEvA) #MESS
-summary(AlpineIbex_DensityModel) #Solo ponemos las variables que selecciona el modelo que son sobre las que vamos a hacer la prediccion
+summary(AlpineIbex_DensityModel) 
 data_<-data %>% as.data.frame() %>% dplyr::select(c(x_cen, y_cen, lc30))
 
 # #10km
@@ -433,20 +417,20 @@ sp<-data_sp %>%
   mutate(lc10=lc_10_sum/lc_10_count*100, lc11=lc_11_sum/lc_11_count*100, lc12=lc_12_sum/lc_12_count*100, lc20=lc_20_sum/lc_20_count*100, lc30=lc_30_sum/lc_30_count*100, lc40=lc_40_sum/lc_40_count*100, lc50=lc_50_sum/lc_50_count*100, lc60=lc_60_sum/lc_60_count*100, lc61=lc_61_sum/lc_61_count*100, lc62=lc_62_sum/lc_62_count*100, lc70=lc_70_sum/lc_70_count*100, lc71=lc_71_sum/lc_71_count*100, lc72=lc_72_sum/lc_72_count*100, lc80=lc_80_sum/lc_80_count*100, lc81=lc_81_sum/lc_81_count*100, lc82=lc_82_sum/lc_82_count*100, lc90=lc_90_sum/lc_90_count*100, lc100=lc_100_sum/lc_100_count*100, lc110=lc_110_sum/lc_110_count*100,lc120=lc_120_sum/lc_120_count*100,lc121=lc_121_sum/lc_121_count*100,lc122=lc_122_sum/lc_122_count*100,lc130=lc_130_sum/lc_130_count*100,lc140=lc_140_sum/lc_140_count*100,lc150=lc_150_sum/lc_150_count*100,lc152=lc_152_sum/lc_152_count*100,lc153=lc_153_sum/lc_153_count*100,lc160=lc_160_sum/lc_160_count*100,lc170=lc_170_sum/lc_170_count*100,lc180=lc_180_sum/lc_180_count*100,lc190=lc_190_sum/lc_190_count*100,lc200=lc_200_sum/lc_200_count*100,lc201=lc_201_sum/lc_201_count*100,lc202=lc_202_sum/lc_202_count*100,lc210=lc_210_sum/lc_210_count*100,lc220=lc_220_sum/lc_220_count*100) %>%
   dplyr::select(!matches("_cou") & !matches("_sum")) %>%
   mutate(Eucmean = replace_na(Eucmean, 0), 
-         Eucmean = ifelse(Eucmean<0, 0.01, Eucmean)) %>% #Como para wild boar transformamos la variable de Eucmean para eliminar los valores negativos por valores de0 muy peque?os
-  #quito variables que no vaya a usar en el modelo
-  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, #species, #me cargo variables que no necesito para el modelo
-                   grow_mean, #la variable grow tiene datos raros, as? que la voy a eliminar de nuestro set de datos
-                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,#, #Me cargo variables lc que en el summary son todo 0
-                   #BR_todasr1
+         Eucmean = ifelse(Eucmean<0, 0.01, Eucmean)) %>% #remove negative values from Eucmean
+# remove columns that are not covariates of the model or have weird values
+  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, 
+                   grow_mean, 
+                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,
                    "individualCount...39", "individualCount...51"
-  )) %>% #quito las bioregiones porque no las vamos a usar para el modelo
-  filter(dens<50) %>%  #tres poligonos de >Spain con areas muy muy muy muy small
-  # filter(dens>0 & dens<50)
+  )) %>%
+  filter(dens<50) %>% # remove silver polygons 
   select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), dens, dens_r_trans,
          matches("bio"), alt, snow, sun, Eucmean, hfp,
          matches("lc"),
          x_cen, y_cen)
+
+                        
 sp<-sp[!is.na(sp$dens),] #Remove NA values from RV: it does not remove any value
 
 #Modeling phase
@@ -464,12 +448,12 @@ sp<-sp[!is.na(sp$lc10),] #Remove NA values from the spset
 data<-sp  %>% mutate(across(all_of(vars_std),~ as.numeric(scale(.))))
 summary(data)
 
-#1.1 Creamos data set de calibrado y de validacion (80% / 20%)
+#1.1 Calibration & validation dataset (80% / 20%)
 set.seed(500)
 s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data_val <- data[-s_model,]; st_geometry(data_tra)<-NULL; st_geometry(data_val)<-NULL
 
 #2.0 VIF <2
-#2.1 seleccionamos variables para el vif, para eso miramos como es la distribucion de las variables
+#2.1 select variables for vif
 # hist(data_tra$Eucmean)
 # hist(data_tra$alt)
 # hist(data_tra$snow)
@@ -505,14 +489,14 @@ s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data
 # hist(data_tra$lc210) #
 # hist(data_tra$lc220) #
 
-#2.1 hacemos el vif
+#2.1 vif
 variables<-data_tra %>% dplyr::select(matches("bio_"), alt, snow, Eucmean,lc10, lc11, lc12, lc30, lc40, lc60, lc70, lc90,
                                       lc100, #lc120,
                                       lc130, x_cen, y_cen)
 resultado.vif0<-usdm::vifstep(variables, th=2); resultado.vif0
 
 
-#2.2) Density Models: binomial negativa necesita que sea un numero entero, por eso se ha transformado la variable densidad *10000
+#2.2) Density Models: negative binomial need integer -> transform density*10000
 #ZINB
 # 1) ajustamos modelo con ZI solo intercepto  + Count variables
 count_vars <- c("bio_02","snow","lc10","lc30","lc40","lc60","lc70","lc100","lc130","Eucmean")
@@ -520,16 +504,16 @@ zi_vars <- count_vars
 res <- stepwise_zeroinfl_alternate(
   data = data_tra,
   response = "dens_r_trans",
-  count_fixed = c("x_cen","y_cen"),              # SIEMPRE dentro del count
+  count_fixed = c("x_cen","y_cen"),              # ALWAYS in the count side 
   count_candidates = count_vars,
-  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") si también los quieres fijos en ZI
+  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") to include as fixed in the ZI
   zi_candidates = zi_vars,
-  start_in = "zi",                               # como tu gráfico: primero inflado, luego conteo
+  start_in = "zi",                               
   dist = "negbin",
   criterion = "AIC",
-  min_improve = 0                                # pon 2 si quieres “solo si mejora >2”
+  min_improve = 0                                # minimum value for model improvment 
 )
-
+       
 res$best_model
 Aoudad_DensityModel<-res$best_model
 # save("Aoudad_DensityModel", file="scripts/ModelResults/densityStepModel_Aoudad_Europe.Rdata")
@@ -562,27 +546,6 @@ ggplot(cal_tot, aes(x = pred_mean, y = obs_mean)) +
     strip.text = element_text(face = "bold")
   )
 
-# s_class <- cut2(data_val$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean <- as.matrix(tapply(data_val$Pred_Red, s_class, mean)) # calculating mean values for predicted
-# y_mean <- as.matrix(tapply(data_val$dens, s_class, mean)) # calculating mean values for observed
-# # corbr1<-cor.test(data_val$Pred_Red, data_val$dens)
-# data_val_w0<-data_val %>%filter(dens_r_trans>0)
-# s_class_w0 <- cut2(data_val_w0$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean_w0 <- as.matrix(tapply(data_val_w0$Pred_Red, s_class_w0, mean)) # calculating mean values for predicted
-# y_mean_w0 <- as.matrix(tapply(data_val_w0$dens, s_class_w0, mean)) # calculating mean values for observed
-#
-# cpE<-rbind(data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data")),
-#            data.frame(s_mean=s_mean_w0, y_mean=y_mean_w0, Type=as.factor("Data without 0")))
-# ggplot(cpE, aes(x=s_mean, y=y_mean, col=Type, shape=Type))+
-#   geom_point(size=4)+ scale_colour_grey()+ scale_shape_manual(values=c(16, 17))+
-#   geom_abline(col="red", lty=2, cex=0.5)+
-#   theme_bw()+
-#   # xlim(0,max(s_mean_w0, max(na.omit(y_mean_w0))))+
-#   # ylim(0,max(max(na.omit(y_mean_w0)), s_mean_w0))+
-#   ylab("Observed Alpine ibex hunted bag density")+xlab("Predicted")+
-#   theme(plot.title = element_text(hjust = 0.5))
-
-
 #3.0) Spatial layer: 10x10km grid
 grid_10km<-st_read(dsn="scripts/data/data_constrained_sp_20220902.gpkg",
                    layer='grid_Aoudad') %>% dplyr::select(-Bioregion) %>%
@@ -603,14 +566,14 @@ colnames(grid_10km)[9:17]<-gsub("_", "_0", colnames(grid_10km)[9:17])
 
 data %>% colnames()
 means<-sp %>% as_tibble() %>%
-  select(15:69) %>%          # selecciona columnas
+  select(15:69) %>%          # select columns
   summarise(across(everything(), ~ mean(.x, na.rm = TRUE)))
 sdss<-sp %>% as_tibble() %>%
-  select(15:69) %>%          # selecciona columnas
+  select(15:69) %>%          # select columns
   summarise(across(everything(), ~ sd(.x, na.rm = TRUE)))
 
 library(modEvA) #MESS
-summary(Aoudad_DensityModel) #Solo ponemos las variables que selecciona el modelo que son sobre las que vamos a hacer la prediccion
+summary(Aoudad_DensityModel) 
 data_<-data %>% as.data.frame() %>% dplyr::select(c(x_cen, y_cen, lc30))
 
 #10km
@@ -643,21 +606,19 @@ data_sp<-st_read(dsn="scripts/data/predicciones_20220811.gpkg",
 sp<-data_sp %>%
   mutate(lc10=lc_10_sum/lc_10_count*100, lc11=lc_11_sum/lc_11_count*100, lc12=lc_12_sum/lc_12_count*100, lc20=lc_20_sum/lc_20_count*100, lc30=lc_30_sum/lc_30_count*100, lc40=lc_40_sum/lc_40_count*100, lc50=lc_50_sum/lc_50_count*100, lc60=lc_60_sum/lc_60_count*100, lc61=lc_61_sum/lc_61_count*100, lc62=lc_62_sum/lc_62_count*100, lc70=lc_70_sum/lc_70_count*100, lc71=lc_71_sum/lc_71_count*100, lc72=lc_72_sum/lc_72_count*100, lc80=lc_80_sum/lc_80_count*100, lc81=lc_81_sum/lc_81_count*100, lc82=lc_82_sum/lc_82_count*100, lc90=lc_90_sum/lc_90_count*100, lc100=lc_100_sum/lc_100_count*100, lc110=lc_110_sum/lc_110_count*100,lc120=lc_120_sum/lc_120_count*100,lc121=lc_121_sum/lc_121_count*100,lc122=lc_122_sum/lc_122_count*100,lc130=lc_130_sum/lc_130_count*100,lc140=lc_140_sum/lc_140_count*100,lc150=lc_150_sum/lc_150_count*100,lc152=lc_152_sum/lc_152_count*100,lc153=lc_153_sum/lc_153_count*100,lc160=lc_160_sum/lc_160_count*100,lc170=lc_170_sum/lc_170_count*100,lc180=lc_180_sum/lc_180_count*100,lc190=lc_190_sum/lc_190_count*100,lc200=lc_200_sum/lc_200_count*100,lc201=lc_201_sum/lc_201_count*100,lc202=lc_202_sum/lc_202_count*100,lc210=lc_210_sum/lc_210_count*100,lc220=lc_220_sum/lc_220_count*100) %>% 
   dplyr::select(!matches("_cou") & !matches("_sum")) %>% 
-  #quito variables que no vaya a usar en el modelo 
-  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, #species, #me cargo variables que no necesito para el modelo
-                   grow_mean, #la variable grow tiene datos raros, as? que la voy a eliminar de nuestro set de datos
-                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,#, #Me cargo variables lc que en el summary son todo 0
-                   #BR_todasr1
+  # remove columns that are not covariates of the model or have weird values
+  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, 
+                   grow_mean, 
+                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,
                    "individualCount...39", "individualCount...51"
-  )) %>% #quito las bioregiones porque no las vamos a usar para el modelo
-  filter(dens<50) %>%  #tres poligonos de >Spain con areas muy muy muy muy small
-  # filter(dens>0 & dens<50) 
-  select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), dens, dens_r_trans, 
-         matches("bio"), alt, snow, sun, Eucmean, hfp, 
-         matches("lc"), 
+  )) %>%
+  filter(dens<50) %>% # remove silver polygons 
+  select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), dens, dens_r_trans,
+         matches("bio"), alt, snow, sun, Eucmean, hfp,
+         matches("lc"),
          x_cen, y_cen)
 
-sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #Como para wild boar transformamos la variable de Eucmean para eliminar los valores negativos por valores de0 muy peque?os
+sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #remove negative values from Eucmean
 sp<-sp[!is.na(sp$dens),] #Remove NA values from RV: it does not remove any value
 
 #Modeling phase
@@ -675,12 +636,12 @@ sp<-sp[!is.na(sp$lc10),] #Remove NA values from the spset
 data<-sp  %>% mutate(across(all_of(vars_std),~ as.numeric(scale(.))))
 summary(data)
 
-#1.1 Creamos data set de calibrado y de validacion (80% / 20%)
+#1.1 Calibration-validation dataset (80% / 20%)
 set.seed(500)
 s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data_val <- data[-s_model,]; st_geometry(data_tra)<-NULL; st_geometry(data_val)<-NULL
 
 #2.0 VIF <2
-#2.1 seleccionamos variables para el vif, para eso miramos como es la distribucion de las variables
+#2.1 select variables for vif
 # hist(data_tra$Eucmean)
 # hist(data_tra$alt) 
 # hist(data_tra$snow)
@@ -729,14 +690,14 @@ zi_vars <- count_vars
 res <- stepwise_zeroinfl_alternate(
   data = data_tra,
   response = "dens_r_trans",
-  count_fixed = c("x_cen","y_cen"),              # SIEMPRE dentro del count
+  count_fixed = c("x_cen","y_cen"),              # ALWAYS in the count side 
   count_candidates = count_vars,
-  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") si también los quieres fijos en ZI
+  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") to include as fixed in the ZI
   zi_candidates = zi_vars,
-  start_in = "zi",                               # como tu gráfico: primero inflado, luego conteo
+  start_in = "zi",                               
   dist = "negbin",
   criterion = "AIC",
-  min_improve = 0                                # pon 2 si quieres “solo si mejora >2”
+  min_improve = 0                                # minimum value for model improvment 
 )
 
 res$best_model
@@ -771,25 +732,7 @@ ggplot(cal_tot, aes(x = pred_mean, y = obs_mean)) +
     strip.text = element_text(face = "bold")
   )
 
-# s_class <- cut2(data_val$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean <- as.matrix(tapply(data_val$Pred_Red, s_class, mean)) # calculating mean values for predicted
-# y_mean <- as.matrix(tapply(data_val$dens, s_class, mean)) # calculating mean values for observed
-# # corbr1<-cor.test(data_val$Pred_Red, data_val$dens)
-# data_val_w0<-data_val %>%filter(dens_r_trans>0)
-# s_class_w0 <- cut2(data_val_w0$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean_w0 <- as.matrix(tapply(data_val_w0$Pred_Red, s_class_w0, mean)) # calculating mean values for predicted
-# y_mean_w0 <- as.matrix(tapply(data_val_w0$dens, s_class_w0, mean)) # calculating mean values for observed
 
-# cpE<-rbind(data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data")),
-#            data.frame(s_mean=s_mean_w0, y_mean=y_mean_w0, Type=as.factor("Data without 0")))
-# ggplot(cpE, aes(x=s_mean, y=y_mean, col=Type, shape=Type))+
-#   geom_point(size=4)+ scale_colour_grey()+ scale_shape_manual(values=c(16, 17))+
-#   geom_abline(col="red", lty=2, cex=0.5)+
-#   theme_bw()+
-#   # xlim(0,max(s_mean_w0, max(na.omit(y_mean_w0))))+
-#   # ylim(0,max(max(na.omit(y_mean_w0)), s_mean_w0))+
-#   ylab("Observed Alpine ibex hunted bag density")+xlab("Predicted")+
-#   theme(plot.title = element_text(hjust = 0.5))
 
 
 #3.0) Spatial layer: 10x10km grid
@@ -812,18 +755,17 @@ colnames(grid_10km)[9:17]<-gsub("_", "_0", colnames(grid_10km)[9:17])
 
 data %>% colnames()
 means<-sp %>% as_tibble() %>% 
-  select(15:69) %>%          # selecciona columnas
+  select(15:69) %>%          # select columns
   summarise(across(everything(), ~ mean(.x, na.rm = TRUE)))
 sdss<-sp %>% as_tibble() %>% 
-  select(15:69) %>%          # selecciona columnas
+  select(15:69) %>%          # select columns
   summarise(across(everything(), ~ sd(.x, na.rm = TRUE)))
 
 library(modEvA) #MESS
-summary(IbWildGoat_DensityModel) #Solo ponemos las variables que selecciona el modelo que son sobre las que vamos a hacer la prediccion
+summary(IbWildGoat_DensityModel) 
 data_<-data %>% as.data.frame() %>% dplyr::select(c(x_cen, y_cen, bio_03, lc10, lc30, lc40, lc60, lc100, snow))
 
 #10km
-# model_vars<-c(x_cen, y_cen, bio_03, bio_10, bio_15, lc10, lc30, lc40, lc60, lc70, lc90, lc100, lc130, Eucmean)
 grid_10km<-grid_10km %>% mutate(across(all_of(colnames(means)), ~ . - means[[cur_column()]])) %>% 
   mutate(across(all_of(colnames(means)), ~ . / sdss[[cur_column()]]))
 
@@ -853,27 +795,25 @@ data_sp<-st_read(dsn="scripts/data/predicciones_20220811.gpkg",
 sp<-data_sp %>%
   mutate(lc10=lc_10_sum/lc_10_count*100, lc11=lc_11_sum/lc_11_count*100, lc12=lc_12_sum/lc_12_count*100, lc20=lc_20_sum/lc_20_count*100, lc30=lc_30_sum/lc_30_count*100, lc40=lc_40_sum/lc_40_count*100, lc50=lc_50_sum/lc_50_count*100, lc60=lc_60_sum/lc_60_count*100, lc61=lc_61_sum/lc_61_count*100, lc62=lc_62_sum/lc_62_count*100, lc70=lc_70_sum/lc_70_count*100, lc71=lc_71_sum/lc_71_count*100, lc72=lc_72_sum/lc_72_count*100, lc80=lc_80_sum/lc_80_count*100, lc81=lc_81_sum/lc_81_count*100, lc82=lc_82_sum/lc_82_count*100, lc90=lc_90_sum/lc_90_count*100, lc100=lc_100_sum/lc_100_count*100, lc110=lc_110_sum/lc_110_count*100,lc120=lc_120_sum/lc_120_count*100,lc121=lc_121_sum/lc_121_count*100,lc122=lc_122_sum/lc_122_count*100,lc130=lc_130_sum/lc_130_count*100,lc140=lc_140_sum/lc_140_count*100,lc150=lc_150_sum/lc_150_count*100,lc152=lc_152_sum/lc_152_count*100,lc153=lc_153_sum/lc_153_count*100,lc160=lc_160_sum/lc_160_count*100,lc170=lc_170_sum/lc_170_count*100,lc180=lc_180_sum/lc_180_count*100,lc190=lc_190_sum/lc_190_count*100,lc200=lc_200_sum/lc_200_count*100,lc201=lc_201_sum/lc_201_count*100,lc202=lc_202_sum/lc_202_count*100,lc210=lc_210_sum/lc_210_count*100,lc220=lc_220_sum/lc_220_count*100) %>% 
   dplyr::select(!matches("_cou") & !matches("_sum")) %>% 
-  #quito variables que no vaya a usar en el modelo 
-  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, #species, #me cargo variables que no necesito para el modelo
-                   grow_mean, #la variable grow tiene datos raros, as? que la voy a eliminar de nuestro set de datos
-                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,#, #Me cargo variables lc que en el summary son todo 0
-                   #BR_todasr1
+  # remove columns that are not covariates of the model or have weird values
+  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, 
+                   grow_mean, 
+                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,
                    "individualCount...39", "individualCount...51"
-  )) %>% #quito las bioregiones porque no las vamos a usar para el modelo
-  filter(dens<50) %>%  #tres poligonos de >Spain con areas muy muy muy muy small
-  # filter(dens>0 & dens<50) 
-  select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), dens, dens_r_trans, 
-         matches("bio"), alt, snow, sun, Eucmean, hfp, 
-         matches("lc"), 
+  )) %>%
+  filter(dens<50) %>% 
+  select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), dens, dens_r_trans,
+         matches("bio"), alt, snow, sun, Eucmean, hfp,
+         matches("lc"),
          x_cen, y_cen)
-
-sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #Como para wild boar transformamos la variable de Eucmean para eliminar los valores negativos por valores de0 muy peque?os
+                        
+sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #remove negative values from Eucmean
 sp<-sp[!is.na(sp$dens),] #Remove NA values from RV: it does not remove any value
 
 #Modeling phase
 #1) data
-colnames(sp)[16:34]<-gsub("_mean", "", colnames(sp)[16:34])
-vars_std <- c(colnames(sp %>% as_tibble())[16:70])
+colnames(sp)[15:33]<-gsub("_mean", "", colnames(sp)[15:33])
+vars_std <- c(colnames(sp %>% as_tibble())[15:69])
 
 #remove NA values from the dataset
 sp<-sp[!is.na(sp$bio_01),] #Remove NA values from the spset
@@ -885,12 +825,12 @@ sp<-sp[!is.na(sp$lc10),] #Remove NA values from the spset
 data<-sp  %>% mutate(across(all_of(vars_std),~ as.numeric(scale(.))))
 summary(data)
 
-#1.1 Creamos data set de calibrado y de validacion (80% / 20%)
+#1.1 Calibration-validation dataset (80% / 20%)
 set.seed(500)
 s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data_val <- data[-s_model,]; st_geometry(data_tra)<-NULL; st_geometry(data_val)<-NULL
 
 #2.0 VIF <2
-#2.1 seleccionamos variables para el vif, para eso miramos como es la distribucion de las variables
+#2.1 select variables for vif
 # hist(data_tra$Eucmean)
 # hist(data_tra$alt) 
 # hist(data_tra$snow)
@@ -926,28 +866,28 @@ s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data
 # hist(data_tra$lc210) #
 # hist(data_tra$lc220) #
 
-#2.1 hacemos el vif
+#2.1 vif
 variables<-data_tra %>% dplyr::select(matches("bio_"), alt, snow, Eucmean, lc10, lc11, lc12, lc30, lc40, lc60, lc70, lc90, 
                                       lc100, #lc120, 
                                       lc130, x_cen, y_cen)
 resultado.vif0<-usdm::vifstep(variables, th=2); resultado.vif0
 
 
-#2.2) Density Models: binomial negativa necesita que sea un numero entero, por eso se ha transformado la variable densidad *10000
+#2.2) Density Models:  negative binomial need integer -> transform density*10000
 #ZINB
 count_vars <- c("bio_15", "alt","lc10","lc30","lc40","lc60","lc70", "lc90","lc100","lc130")
 zi_vars <- count_vars
 res <- stepwise_zeroinfl_alternate(
   data = data_tra,
   response = "dens_r_trans",
-  count_fixed = c("x_cen","y_cen"),              # SIEMPRE dentro del count
+  count_fixed = c("x_cen","y_cen"),              # ALWAYS in the count side 
   count_candidates = count_vars,
-  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") si también los quieres fijos en ZI
+  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") to include as fixed in the ZI
   zi_candidates = zi_vars,
-  start_in = "zi",                               # como tu gráfico: primero inflado, luego conteo
+  start_in = "zi",                               
   dist = "negbin",
   criterion = "AIC",
-  min_improve = 0                                # pon 2 si quieres “solo si mejora >2”
+  min_improve = 0                                # minimum value for model improvment 
 )
 
 res$best_model
@@ -983,27 +923,6 @@ ggplot(cal_tot, aes(x = pred_mean, y = obs_mean)) +
     strip.text = element_text(face = "bold")
   )
 
-# s_class <- cut2(data_val$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean <- as.matrix(tapply(data_val$Pred_Red, s_class, mean)) # calculating mean values for predicted
-# y_mean <- as.matrix(tapply(data_val$dens, s_class, mean)) # calculating mean values for observed
-# # corbr1<-cor.test(data_val$Pred_Red, data_val$dens)
-# data_val_w0<-data_val %>%filter(dens_r_trans>0)
-# s_class_w0 <- cut2(data_val_w0$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean_w0 <- as.matrix(tapply(data_val_w0$Pred_Red, s_class_w0, mean)) # calculating mean values for predicted
-# y_mean_w0 <- as.matrix(tapply(data_val_w0$dens, s_class_w0, mean)) # calculating mean values for observed
-# 
-# cpE<-rbind(data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data")),
-#            data.frame(s_mean=s_mean_w0, y_mean=y_mean_w0, Type=as.factor("Data without 0")))
-# ggplot(cpE, aes(x=s_mean, y=y_mean, col=Type, shape=Type))+
-#   geom_point(size=4)+ scale_colour_grey()+ scale_shape_manual(values=c(16, 17))+
-#   geom_abline(col="red", lty=2, cex=0.5)+
-#   theme_bw()+
-#   # xlim(0,max(s_mean_w0, max(na.omit(y_mean_w0))))+
-#   # ylim(0,max(max(na.omit(y_mean_w0)), s_mean_w0))+
-#   ylab("Observed Alpine ibex hunted bag density")+xlab("Predicted")+
-#   theme(plot.title = element_text(hjust = 0.5))
-# 
-
 
 #3.0) Spatial layer: 10x10km grid
 grid_10km<-st_read(dsn="scripts/data/data_constrained_sp_20220902.gpkg", layer='grid_Moose') %>% dplyr::select(-Bioregion) %>% 
@@ -1031,7 +950,7 @@ sdss<-sp %>% as_tibble() %>%
   summarise(across(everything(), ~ sd(.x, na.rm = TRUE)))
 
 library(modEvA) #MESS
-summary(Moose_DensityModel) #Solo ponemos las variables que selecciona el modelo que son sobre las que vamos a hacer la prediccion
+summary(Moose_DensityModel)
 data_<-data %>% as.data.frame() %>% dplyr::select(c(x_cen, y_cen, bio_15, lc10, lc30, lc40, lc60, lc70, lc90, lc130))
 
 #10km
@@ -1063,21 +982,20 @@ data_sp<-data_sp %>% mutate(x_cen=st_coordinates(st_centroid(data_sp))[,1], y_ce
 sp<-data_sp %>%
   mutate(lc10=lc_10_sum/lc_10_count*100, lc11=lc_11_sum/lc_11_count*100, lc12=lc_12_sum/lc_12_count*100, lc20=lc_20_sum/lc_20_count*100, lc30=lc_30_sum/lc_30_count*100, lc40=lc_40_sum/lc_40_count*100, lc50=lc_50_sum/lc_50_count*100, lc60=lc_60_sum/lc_60_count*100, lc61=lc_61_sum/lc_61_count*100, lc62=lc_62_sum/lc_62_count*100, lc70=lc_70_sum/lc_70_count*100, lc71=lc_71_sum/lc_71_count*100, lc72=lc_72_sum/lc_72_count*100, lc80=lc_80_sum/lc_80_count*100, lc81=lc_81_sum/lc_81_count*100, lc82=lc_82_sum/lc_82_count*100, lc90=lc_90_sum/lc_90_count*100, lc100=lc_100_sum/lc_100_count*100, lc110=lc_110_sum/lc_110_count*100,lc120=lc_120_sum/lc_120_count*100,lc121=lc_121_sum/lc_121_count*100,lc122=lc_122_sum/lc_122_count*100,lc130=lc_130_sum/lc_130_count*100,lc140=lc_140_sum/lc_140_count*100,lc150=lc_150_sum/lc_150_count*100,lc152=lc_152_sum/lc_152_count*100,lc153=lc_153_sum/lc_153_count*100,lc160=lc_160_sum/lc_160_count*100,lc170=lc_170_sum/lc_170_count*100,lc180=lc_180_sum/lc_180_count*100,lc190=lc_190_sum/lc_190_count*100,lc200=lc_200_sum/lc_200_count*100,lc201=lc_201_sum/lc_201_count*100,lc202=lc_202_sum/lc_202_count*100,lc210=lc_210_sum/lc_210_count*100,lc220=lc_220_sum/lc_220_count*100) %>% 
   dplyr::select(!matches("_cou") & !matches("_sum")) %>% 
-  #quito variables que no vaya a usar en el modelo 
-  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, #species, #me cargo variables que no necesito para el modelo
-                   grow_mean, #la variable grow tiene datos raros, as? que la voy a eliminar de nuestro set de datos
-                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,#, #Me cargo variables lc que en el summary son todo 0
-                   #BR_todasr1
+  # remove columns that are not covariates of the model or have weird values
+  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, 
+                   grow_mean,
+                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,
                    "individualCount...39", "individualCount...51"
-  )) %>% #quito las bioregiones porque no las vamos a usar para el modelo
-  filter(dens<50) %>%  #tres poligonos de >Spain con areas muy muy muy muy small
+  )) %>% 
+  filter(dens<50) %>%  
   # filter(dens>0 & dens<50) 
   select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), dens, dens_r_trans, 
          matches("bio"), alt, snow, sun, Eucmean, hfp, 
          matches("lc"), 
          x_cen, y_cen)
 
-sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #Como para wild boar transformamos la variable de Eucmean para eliminar los valores negativos por valores de0 muy peque?os
+sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) # remove negative values of Eucmean
 sp<-sp[!is.na(sp$dens),] #Remove NA values from RV: it does not remove any value
 
 #Modeling phase
@@ -1096,12 +1014,12 @@ data<-sp  %>% mutate(across(all_of(vars_std),~ as.numeric(scale(.))))
 summary(data)
 
 
-#1.1 Creamos data set de calibrado y de validacion (80% / 20%)
+#1.1 Calibration and validation dataset (80% / 20%)
 set.seed(500)
 s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data_val <- data[-s_model,]; st_geometry(data_tra)<-NULL; st_geometry(data_val)<-NULL
 
 #2.0 VIF <2
-#2.1 seleccionamos variables para el vif, para eso miramos como es la distribucion de las variables
+#2.1 select variables for vif
 # hist(data_tra$Eucmean)
 # hist(data_tra$alt) 
 # hist(data_tra$snow)
@@ -1137,15 +1055,15 @@ s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data
 # hist(data_tra$lc210) #
 # hist(data_tra$lc220) #
 
-#2.1 hacemos el vif
+#2.1 vif
 variables<-data_tra %>% dplyr::select(matches("bio_"), alt, snow, Eucmean,lc10, lc11, lc12, lc30, lc40, lc60, lc70, lc90, 
                                       lc100, #lc120, 
                                       lc130, x_cen, y_cen)
 resultado.vif0<-usdm::vifstep(variables, th=2); resultado.vif0
 
-#2.2) Density Models: binomial negativa necesita que sea un numero entero, por eso se ha transformado la variable densidad *10000
+#2.2) Density Models: negative binomial need integer -> transform density *10000
 #ZINB
-#modelo sin stepwise
+#model sin stepwise
 # 1) ajustamos modelo con ZI solo intercepto  + Count variables
 count_vars <- c("bio_07", "bio_14", "bio_19", "alt", "Eucmean", "lc10","lc30","lc40","lc60","lc70", "lc90","lc100","lc130")
 zi_vars <- count_vars
@@ -1153,15 +1071,16 @@ zi_vars <- count_vars
 res <- stepwise_zeroinfl_alternate(
   data = data_tra,
   response = "dens_r_trans",
-  count_fixed = c("x_cen","y_cen"),              # SIEMPRE dentro del count
+  count_fixed = c("x_cen","y_cen"),              # ALWAYS in the count side 
   count_candidates = count_vars,
-  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") si también los quieres fijos en ZI
+  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") to include as fixed in the ZI
   zi_candidates = zi_vars,
-  start_in = "zi",                               # como tu gráfico: primero inflado, luego conteo
+  start_in = "zi",                               
   dist = "negbin",
   criterion = "AIC",
-  min_improve = 0                                # pon 2 si quieres “solo si mejora >2”
+  min_improve = 0                                # minimum value for model improvment 
 )
+
 res$best_model
 Mouflon_DensityModel<-res$best_model
 # save(Mouflon_DensityModel, file="scripts/ModelResults/densityStepModel_Mouflon_Europe.Rdata")
@@ -1193,27 +1112,6 @@ ggplot(cal_tot, aes(x = pred_mean, y = obs_mean)) +
     strip.text = element_text(face = "bold")
   )
 
-# s_class <- cut2(data_val$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean <- as.matrix(tapply(data_val$Pred_Red, s_class, mean)) # calculating mean values for predicted
-# y_mean <- as.matrix(tapply(data_val$dens, s_class, mean)) # calculating mean values for observed
-# # corbr1<-cor.test(data_val$Pred_Red, data_val$dens)
-# data_val_w0<-data_val %>%filter(dens_r_trans>0)
-# s_class_w0 <- cut2(data_val_w0$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean_w0 <- as.matrix(tapply(data_val_w0$Pred_Red, s_class_w0, mean)) # calculating mean values for predicted
-# y_mean_w0 <- as.matrix(tapply(data_val_w0$dens, s_class_w0, mean)) # calculating mean values for observed
-# 
-# cpE<-rbind(data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data")),
-#            data.frame(s_mean=s_mean_w0, y_mean=y_mean_w0, Type=as.factor("Data without 0")))
-# ggplot(cpE, aes(x=s_mean, y=y_mean, col=Type, shape=Type))+
-#   geom_point(size=4)+ scale_colour_grey()+ scale_shape_manual(values=c(16, 17))+
-#   geom_abline(col="red", lty=2, cex=0.5)+
-#   theme_bw()+
-#   # xlim(0,max(s_mean_w0, max(na.omit(y_mean_w0))))+
-#   # ylim(0,max(max(na.omit(y_mean_w0)), s_mean_w0))+
-#   ylab("Observed Alpine ibex hunted bag density")+xlab("Predicted")+
-#   theme(plot.title = element_text(hjust = 0.5))
-
-
 #3.0) Spatial layer: 10x10km grid
 grid_10km<-st_read(dsn="scripts/data/data_constrained_sp_20220902.gpkg", layer='grid_Mouflon') %>% dplyr::select(-Bioregion) %>% 
   rename(Bioregion=BR_T10, NUTS=NUT, Eucmean=Eucalyptus) %>% 
@@ -1234,14 +1132,14 @@ colnames(grid_10km)[9:17]<-gsub("_", "_0", colnames(grid_10km)[9:17])
 
 data %>% colnames()
 means<-sp %>% as_tibble() %>% 
-  select(17:71) %>%          # selecciona columnas
+  select(17:71) %>%          # select columns
   summarise(across(everything(), ~ mean(.x, na.rm = TRUE)))
 sdss<-sp %>% as_tibble() %>% 
-  select(17:71) %>%          # selecciona columnas
+  select(17:71) %>%          # select columns
   summarise(across(everything(), ~ sd(.x, na.rm = TRUE)))
 
 library(modEvA) #MESS
-summary(Mouflon_DensityModel) #Solo ponemos las variables que selecciona el modelo que son sobre las que vamos a hacer la prediccion
+summary(Mouflon_DensityModel) 
 data_<-data %>% as.data.frame() %>% dplyr::select(c(x_cen, y_cen, bio_07, bio_14, bio_19, alt, lc10, lc40, lc60, lc130, Eucmean))
 
 #10km
@@ -1273,20 +1171,19 @@ data_sp<-st_read(dsn="scripts/data/predicciones_20220811.gpkg",
 sp<-data_sp %>%
   mutate(lc10=lc_10_sum/lc_10_count*100, lc11=lc_11_sum/lc_11_count*100, lc12=lc_12_sum/lc_12_count*100, lc20=lc_20_sum/lc_20_count*100, lc30=lc_30_sum/lc_30_count*100, lc40=lc_40_sum/lc_40_count*100, lc50=lc_50_sum/lc_50_count*100, lc60=lc_60_sum/lc_60_count*100, lc61=lc_61_sum/lc_61_count*100, lc62=lc_62_sum/lc_62_count*100, lc70=lc_70_sum/lc_70_count*100, lc71=lc_71_sum/lc_71_count*100, lc72=lc_72_sum/lc_72_count*100, lc80=lc_80_sum/lc_80_count*100, lc81=lc_81_sum/lc_81_count*100, lc82=lc_82_sum/lc_82_count*100, lc90=lc_90_sum/lc_90_count*100, lc100=lc_100_sum/lc_100_count*100, lc110=lc_110_sum/lc_110_count*100,lc120=lc_120_sum/lc_120_count*100,lc121=lc_121_sum/lc_121_count*100,lc122=lc_122_sum/lc_122_count*100,lc130=lc_130_sum/lc_130_count*100,lc140=lc_140_sum/lc_140_count*100,lc150=lc_150_sum/lc_150_count*100,lc152=lc_152_sum/lc_152_count*100,lc153=lc_153_sum/lc_153_count*100,lc160=lc_160_sum/lc_160_count*100,lc170=lc_170_sum/lc_170_count*100,lc180=lc_180_sum/lc_180_count*100,lc190=lc_190_sum/lc_190_count*100,lc200=lc_200_sum/lc_200_count*100,lc201=lc_201_sum/lc_201_count*100,lc202=lc_202_sum/lc_202_count*100,lc210=lc_210_sum/lc_210_count*100,lc220=lc_220_sum/lc_220_count*100) %>% 
   dplyr::select(!matches("_cou") & !matches("_sum")) %>% 
-  #quito variables que no vaya a usar en el modelo 
-  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, #species, #me cargo variables que no necesito para el modelo
-                   grow_mean, #la variable grow tiene datos raros, as? que la voy a eliminar de nuestro set de datos
-                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,#, #Me cargo variables lc que en el summary son todo 0
-                   #BR_todasr1
+  # remove columns that are not covariates of the model or have weird values
+  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, 
+                   grow_mean,
+                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,
                    "individualCount...39", "individualCount...51"
-  )) %>% #quito las bioregiones porque no las vamos a usar para el modelo
-  filter(dens<50) %>%  #tres poligonos de >Spain con areas muy muy muy muy small
+  )) %>% 
+  filter(dens<50) %>% 
   select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), dens, dens_r_trans, 
          matches("bio"), alt, snow, sun, Eucmean, hfp, 
          matches("lc"), 
          x_cen, y_cen)
 
-sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #Como para wild boar transformamos la variable de Eucmean para eliminar los valores negativos por valores de0 muy peque?os
+sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #remove negative values of Eucmean
 sp<-sp[!is.na(sp$dens),] #Remove NA values from RV: it does not remove any value
 
 #Modeling phase
@@ -1304,12 +1201,12 @@ sp<-sp[!is.na(sp$lc10),] #Remove NA values from the spset
 data<-sp  %>% mutate(across(all_of(vars_std),~ as.numeric(scale(.))))
 summary(data)
 
-#1.1 Creamos data set de calibrado y de validacion (80% / 20%)
+#1.1 Calibrado and validation dataset (80% / 20%)
 set.seed(500)
 s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data_val <- data[-s_model,]; st_geometry(data_tra)<-NULL; st_geometry(data_val)<-NULL
 
 #2.0 VIF <2
-#2.1 seleccionamos variables para el vif, para eso miramos como es la distribucion de las variables
+#2.1 select variables for vif 
 # hist(data_tra$Eucmean)
 # hist(data_tra$alt) 
 # hist(data_tra$snow)
@@ -1345,29 +1242,30 @@ s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data
 # hist(data_tra$lc210) #
 # hist(data_tra$lc220) #
 
-#2.1 hacemos el vif
+#2.1 vif
 variables<-data_tra %>% dplyr::select(matches("bio_"), alt, snow, Eucmean,lc10, lc11, lc12, lc30, lc40, lc60, lc70, lc90, 
                                       lc100, #lc120, 
                                       lc130, x_cen, y_cen)
 resultado.vif0<-usdm::vifstep(variables, th=2); resultado.vif0
 
 
-#2.2) Density Models: binomial negativa necesita que sea un numero entero, por eso se ha transformado la variable densidad *10000
+#2.2) Density Models: negative binomial need integer -> transform density*10000
 #ZINB
 count_vars <- c("bio_03", "bio_09", "bio_15", "bio_19", "lc10","lc30","lc40","lc60","lc70", "lc90","lc100","lc130")
 zi_vars <- count_vars
 res <- stepwise_zeroinfl_alternate(
   data = data_tra,
   response = "dens_r_trans",
-  count_fixed = c("x_cen","y_cen"),              # SIEMPRE dentro del count
+  count_fixed = c("x_cen","y_cen"),              # ALWAYS in the count side 
   count_candidates = count_vars,
-  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") si también los quieres fijos en ZI
+  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") to include as fixed in the ZI
   zi_candidates = zi_vars,
-  start_in = "zi",                               # como tu gráfico: primero inflado, luego conteo
+  start_in = "zi",                               
   dist = "negbin",
   criterion = "AIC",
-  min_improve = 0                                # pon 2 si quieres “solo si mejora >2”
+  min_improve = 0                                # minimum value for model improvment 
 )
+
 
 res$best_model
 NorthChamois_DensityModel<-res$best_model
@@ -1400,26 +1298,6 @@ ggplot(cal_tot, aes(x = pred_mean, y = obs_mean)) +
     strip.text = element_text(face = "bold")
   )
 
-# s_class <- cut2(data_val$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean <- as.matrix(tapply(data_val$Pred_Red, s_class, mean)) # calculating mean values for predicted
-# y_mean <- as.matrix(tapply(data_val$dens, s_class, mean)) # calculating mean values for observed
-# # corbr1<-cor.test(data_val$Pred_Red, data_val$dens)
-# data_val_w0<-data_val %>%filter(dens_r_trans>0)
-# s_class_w0 <- cut2(data_val_w0$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean_w0 <- as.matrix(tapply(data_val_w0$Pred_Red, s_class_w0, mean)) # calculating mean values for predicted
-# y_mean_w0 <- as.matrix(tapply(data_val_w0$dens, s_class_w0, mean)) # calculating mean values for observed
-# 
-# cpE<-rbind(data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data")),
-#            data.frame(s_mean=s_mean_w0, y_mean=y_mean_w0, Type=as.factor("Data without 0")))
-# ggplot(cpE, aes(x=s_mean, y=y_mean, col=Type, shape=Type))+
-#   geom_point(size=4)+ scale_colour_grey()+ scale_shape_manual(values=c(16, 17))+
-#   geom_abline(col="red", lty=2, cex=0.5)+
-#   theme_bw()+
-#   # xlim(0,max(s_mean_w0, max(na.omit(y_mean_w0))))+
-#   # ylim(0,max(max(na.omit(y_mean_w0)), s_mean_w0))+
-#   ylab("Observed Alpine ibex hunted bag density")+xlab("Predicted")+
-#   theme(plot.title = element_text(hjust = 0.5))
-# 
 
 #3.0) Spatial layer: 10x10km grid
 grid_10km<-st_read(dsn="scripts/data/data_constrained_sp_20220902.gpkg", layer='grid_Chamois') %>% dplyr::select(-Bioregion) %>% 
@@ -1441,14 +1319,14 @@ colnames(grid_10km)[9:17]<-gsub("_", "_0", colnames(grid_10km)[9:17])
 
 data %>% colnames()
 means<-sp %>% as_tibble() %>% 
-  select(16:70) %>%          # selecciona columnas
+  select(16:70) %>%          # select columns
   summarise(across(everything(), ~ mean(.x, na.rm = TRUE)))
 sdss<-sp %>% as_tibble() %>% 
-  select(16:70) %>%          # selecciona columnas
+  select(16:70) %>%          # select columns
   summarise(across(everything(), ~ sd(.x, na.rm = TRUE)))
 
 library(modEvA) #MESS
-summary(NorthChamois_DensityModel) #Solo ponemos las variables que selecciona el modelo que son sobre las que vamos a hacer la prediccion
+summary(NorthChamois_DensityModel) 
 data_<-data %>% as.data.frame() %>% dplyr::select(c(x_cen, y_cen, bio_03, bio_09, bio_15, bio_19))
 
 #10km
@@ -1479,21 +1357,19 @@ data_sp<-st_read(dsn="scripts/data/predicciones_20220811.gpkg",
 sp<-data_sp %>%
   mutate(lc10=lc_10_sum/lc_10_count*100, lc11=lc_11_sum/lc_11_count*100, lc12=lc_12_sum/lc_12_count*100, lc20=lc_20_sum/lc_20_count*100, lc30=lc_30_sum/lc_30_count*100, lc40=lc_40_sum/lc_40_count*100, lc50=lc_50_sum/lc_50_count*100, lc60=lc_60_sum/lc_60_count*100, lc61=lc_61_sum/lc_61_count*100, lc62=lc_62_sum/lc_62_count*100, lc70=lc_70_sum/lc_70_count*100, lc71=lc_71_sum/lc_71_count*100, lc72=lc_72_sum/lc_72_count*100, lc80=lc_80_sum/lc_80_count*100, lc81=lc_81_sum/lc_81_count*100, lc82=lc_82_sum/lc_82_count*100, lc90=lc_90_sum/lc_90_count*100, lc100=lc_100_sum/lc_100_count*100, lc110=lc_110_sum/lc_110_count*100,lc120=lc_120_sum/lc_120_count*100,lc121=lc_121_sum/lc_121_count*100,lc122=lc_122_sum/lc_122_count*100,lc130=lc_130_sum/lc_130_count*100,lc140=lc_140_sum/lc_140_count*100,lc150=lc_150_sum/lc_150_count*100,lc152=lc_152_sum/lc_152_count*100,lc153=lc_153_sum/lc_153_count*100,lc160=lc_160_sum/lc_160_count*100,lc170=lc_170_sum/lc_170_count*100,lc180=lc_180_sum/lc_180_count*100,lc190=lc_190_sum/lc_190_count*100,lc200=lc_200_sum/lc_200_count*100,lc201=lc_201_sum/lc_201_count*100,lc202=lc_202_sum/lc_202_count*100,lc210=lc_210_sum/lc_210_count*100,lc220=lc_220_sum/lc_220_count*100) %>% 
   dplyr::select(!matches("_cou") & !matches("_sum")) %>% 
-  #quito variables que no vaya a usar en el modelo 
-  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, #species, #me cargo variables que no necesito para el modelo
-                   grow_mean, #la variable grow tiene datos raros, as? que la voy a eliminar de nuestro set de datos
-                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,#, #Me cargo variables lc que en el summary son todo 0
-                   #BR_todasr1
+  # remove columns that are not covariates of the model or have weird values
+  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path,
+                   grow_mean,
+                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,
                    "individualCount...39", "individualCount...51"
-  )) %>% #quito las bioregiones porque no las vamos a usar para el modelo
-  filter(dens<50) %>%  #tres poligonos de >Spain con areas muy muy muy muy small
-  # filter(dens>0 & dens<50) 
+  )) %>% 
+  filter(dens<50) %>%
   select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), dens, dens_r_trans, 
          matches("bio"), alt, snow, sun, Eucmean, hfp, 
          matches("lc"), 
          x_cen, y_cen)
 
-sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #Como para wild boar transformamos la variable de Eucmean para eliminar los valores negativos por valores de0 muy peque?os
+sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #remove negative values from Eucmean
 sp<-sp[!is.na(sp$dens),] #Remove NA values from RV: it does not remove any value
 
 #Modeling phase
@@ -1511,12 +1387,12 @@ sp<-sp[!is.na(sp$lc10),] #Remove NA values from the spset
 data<-sp  %>% mutate(across(all_of(vars_std),~ as.numeric(scale(.))))
 summary(data)
 
-#1.1 Creamos data set de calibrado y de validacion (80% / 20%)
+#1.1 Calibration and validation dataset (80% / 20%)
 set.seed(500)
 s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data_val <- data[-s_model,]; st_geometry(data_tra)<-NULL; st_geometry(data_val)<-NULL
 
 #2.0 VIF <2
-#2.1 seleccionamos variables para el vif, para eso miramos como es la distribucion de las variables
+#2.1 select vif variables
 # hist(data_tra$Eucmean)
 # hist(data_tra$alt) 
 # hist(data_tra$snow)
@@ -1552,13 +1428,13 @@ s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data
 # hist(data_tra$lc210) #
 # hist(data_tra$lc220) #
 
-#2.1 hacemos el vif
+#2.1 vif
 variables<-data_tra %>% dplyr::select(matches("bio_"), alt, snow, Eucmean,lc10, lc11, lc12, lc30, lc40, lc60, lc70, lc90, 
                                       lc100, #lc120, 
                                       lc130, x_cen, y_cen)
 resultado.vif0<-usdm::vifstep(variables, th=2); resultado.vif0
 
-#2.2) Density Models: binomial negativa necesita que sea un numero entero, por eso se ha transformado la variable densidad *10000
+#2.2) Density Models: negative binomial need integer -> transform density*10000
 #ZINB
 count_vars <- c("bio_03", "bio_09", "bio_15", "alt", "lc10","lc30","lc40","lc60", "lc70", "lc90","lc100","lc130")
 zi_vars <- count_vars
@@ -1608,26 +1484,6 @@ ggplot(cal_tot, aes(x = pred_mean, y = obs_mean)) +
     strip.text = element_text(face = "bold")
   )
 
-# s_class <- cut2(data_val$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean <- as.matrix(tapply(data_val$Pred_Red, s_class, mean)) # calculating mean values for predicted
-# y_mean <- as.matrix(tapply(data_val$dens, s_class, mean)) # calculating mean values for observed
-# # corbr1<-cor.test(data_val$Pred_Red, data_val$dens)
-# data_val_w0<-data_val %>%filter(dens_r_trans>0)
-# s_class_w0 <- cut2(data_val_w0$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean_w0 <- as.matrix(tapply(data_val_w0$Pred_Red, s_class_w0, mean)) # calculating mean values for predicted
-# y_mean_w0 <- as.matrix(tapply(data_val_w0$dens, s_class_w0, mean)) # calculating mean values for observed
-# 
-# cpE<-rbind(data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data")),
-#            data.frame(s_mean=s_mean_w0, y_mean=y_mean_w0, Type=as.factor("Data without 0")))
-# ggplot(cpE, aes(x=s_mean, y=y_mean, col=Type, shape=Type))+
-#   geom_point(size=4)+ scale_colour_grey()+ scale_shape_manual(values=c(16, 17))+
-#   geom_abline(col="red", lty=2, cex=0.5)+
-#   theme_bw()+
-#   # xlim(0,max(s_mean_w0, max(na.omit(y_mean_w0))))+
-#   # ylim(0,max(max(na.omit(y_mean_w0)), s_mean_w0))+
-#   ylab("Observed Alpine ibex hunted bag density")+xlab("Predicted")+
-#   theme(plot.title = element_text(hjust = 0.5))
-
 
 #3.0) Spatial layer: 10x10km grid
 grid_10km<-st_read(dsn="scripts/data/data_constrained_sp_20220902.gpkg", 
@@ -1649,14 +1505,14 @@ colnames(grid_10km)[9:17]<-gsub("_", "_0", colnames(grid_10km)[9:17])
 
 data %>% colnames()
 means<-sp %>% as_tibble() %>% 
-  select(15:69) %>%          # selecciona columnas
+  select(15:69) %>%          # select columns
   summarise(across(everything(), ~ mean(.x, na.rm = TRUE)))
 sdss<-sp %>% as_tibble() %>% 
-  select(15:69) %>%          # selecciona columnas
+  select(15:69) %>%          # select columns
   summarise(across(everything(), ~ sd(.x, na.rm = TRUE)))
 
 library(modEvA) #MESS
-summary(PyrChamois_DensityModel) #Solo ponemos las variables que selecciona el modelo que son sobre las que vamos a hacer la prediccion
+summary(PyrChamois_DensityModel) 
 data_<-data %>% as.data.frame() %>% dplyr::select(c(x_cen, y_cen, bio_09, alt, lc60, lc70))
 
 #10km
@@ -1688,21 +1544,19 @@ data_sp<-st_read(dsn="scripts/data/predicciones_20220811.gpkg",
 sp<-data_sp %>%
   mutate(lc10=lc_10_sum/lc_10_count*100, lc11=lc_11_sum/lc_11_count*100, lc12=lc_12_sum/lc_12_count*100, lc20=lc_20_sum/lc_20_count*100, lc30=lc_30_sum/lc_30_count*100, lc40=lc_40_sum/lc_40_count*100, lc50=lc_50_sum/lc_50_count*100, lc60=lc_60_sum/lc_60_count*100, lc61=lc_61_sum/lc_61_count*100, lc62=lc_62_sum/lc_62_count*100, lc70=lc_70_sum/lc_70_count*100, lc71=lc_71_sum/lc_71_count*100, lc72=lc_72_sum/lc_72_count*100, lc80=lc_80_sum/lc_80_count*100, lc81=lc_81_sum/lc_81_count*100, lc82=lc_82_sum/lc_82_count*100, lc90=lc_90_sum/lc_90_count*100, lc100=lc_100_sum/lc_100_count*100, lc110=lc_110_sum/lc_110_count*100,lc120=lc_120_sum/lc_120_count*100,lc121=lc_121_sum/lc_121_count*100,lc122=lc_122_sum/lc_122_count*100,lc130=lc_130_sum/lc_130_count*100,lc140=lc_140_sum/lc_140_count*100,lc150=lc_150_sum/lc_150_count*100,lc152=lc_152_sum/lc_152_count*100,lc153=lc_153_sum/lc_153_count*100,lc160=lc_160_sum/lc_160_count*100,lc170=lc_170_sum/lc_170_count*100,lc180=lc_180_sum/lc_180_count*100,lc190=lc_190_sum/lc_190_count*100,lc200=lc_200_sum/lc_200_count*100,lc201=lc_201_sum/lc_201_count*100,lc202=lc_202_sum/lc_202_count*100,lc210=lc_210_sum/lc_210_count*100,lc220=lc_220_sum/lc_220_count*100) %>%
   dplyr::select(!matches("_cou") & !matches("_sum")) %>%
-  #quito variables que no vaya a usar en el modelo
-  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, #species, #me cargo variables que no necesito para el modelo
-                   grow_mean, #la variable grow tiene datos raros, as? que la voy a eliminar de nuestro set de datos
-                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,#, #Me cargo variables lc que en el summary son todo 0
-                   #BR_todasr1
+  # remove columns that are not covariates of the model or have weird values
+  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, 
+                   grow_mean,
+                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,
                    "individualCount...39", "individualCount...51"
-  )) %>% #quito las bioregiones porque no las vamos a usar para el modelo
-  filter(dens<50) %>%  #tres poligonos de >Spain con areas muy muy muy muy small
-  # filter(dens>0 & dens<50)
+  )) %>% 
+  filter(dens<50) %>% 
   select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), dens, dens_r_trans,
          matches("bio"), alt, snow, sun, Eucmean, hfp,
          matches("lc"),
          x_cen, y_cen)
 
-sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #Como para wild boar transformamos la variable de Eucmean para eliminar los valores negativos por valores de0 muy peque?os
+sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #remove negative values for Eucmean
 sp<-sp[!is.na(sp$dens),] #Remove NA values from RV: it does not remove any value
 
 #Modeling phase
@@ -1720,12 +1574,12 @@ sp<-sp[!is.na(sp$lc10),] #Remove NA values from the spset
 data<-sp  %>% mutate(across(all_of(vars_std),~ as.numeric(scale(.))))
 summary(data)
 
-#1.1 Creamos data set de calibrado y de validacion (80% / 20%)
+#1.1 Calibration and validation dataset (80% / 20%)
 set.seed(500)
 s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data_val <- data[-s_model,]; st_geometry(data_tra)<-NULL; st_geometry(data_val)<-NULL
 
 #2.0 VIF <2
-#2.1 seleccionamos variables para el vif, para eso miramos como es la distribucion de las variables
+#2.1 select vif variables
 # hist(data_tra$Eucmean)
 # hist(data_tra$alt)
 # hist(data_tra$snow)
@@ -1761,7 +1615,7 @@ s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data
 # hist(data_tra$lc210) #
 # hist(data_tra$lc220) #
 
-#2.1 hacemos el vif
+#2.1 vif
 variables<-data_tra %>% dplyr::select(matches("bio_"), alt, snow, Eucmean,lc10, lc11, #lc12,
                                       lc30, lc40, lc60, lc70, lc90,
                                       lc100, #lc120,
@@ -1769,7 +1623,7 @@ variables<-data_tra %>% dplyr::select(matches("bio_"), alt, snow, Eucmean,lc10, 
 resultado.vif0<-usdm::vifstep(variables, th=2); resultado.vif0
 
 
-#2.2) Density Models: binomial negativa necesita que sea un numero entero, por eso se ha transformado la variable densidad *10000
+#2.2) Density Models: negative binomial need integer -> transform density*10000
 #ZINB
 #modelo sin stepwise
 count_vars <- c("lc30","lc40", "lc60", "lc130")
@@ -1777,14 +1631,14 @@ zi_vars <- count_vars
 res <- stepwise_zeroinfl_alternate(
   data = data_tra,
   response = "dens_r_trans",
-  count_fixed = c("x_cen","y_cen"),              # SIEMPRE dentro del count
+  count_fixed = c("x_cen","y_cen"),              # ALWAYS in the count side 
   count_candidates = count_vars,
-  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") si también los quieres fijos en ZI
+  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") to include as fixed in the ZI
   zi_candidates = zi_vars,
-  start_in = "zi",                               # como tu gráfico: primero inflado, luego conteo
+  start_in = "zi",                               
   dist = "negbin",
   criterion = "AIC",
-  min_improve = 0                                # pon 2 si quieres “solo si mejora >2”
+  min_improve = 0                                # minimum value for model improvment 
 )
 
 res$best_model
@@ -1819,27 +1673,6 @@ ggplot(cal_tot, aes(x = pred_mean, y = obs_mean)) +
     strip.text = element_text(face = "bold")
   )
 
-# s_class <- cut2(data_val$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean <- as.matrix(tapply(data_val$Pred_Red, s_class, mean)) # calculating mean values for predicted
-# y_mean <- as.matrix(tapply(data_val$dens, s_class, mean)) # calculating mean values for observed
-# # corbr1<-cor.test(data_val$Pred_Red, data_val$dens)
-# data_val_w0<-data_val %>%filter(dens_r_trans>0)
-# s_class_w0 <- cut2(data_val_w0$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean_w0 <- as.matrix(tapply(data_val_w0$Pred_Red, s_class_w0, mean)) # calculating mean values for predicted
-# y_mean_w0 <- as.matrix(tapply(data_val_w0$dens, s_class_w0, mean)) # calculating mean values for observed
-#
-# 
-# cpE<-rbind(data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data")),
-#            data.frame(s_mean=s_mean_w0, y_mean=y_mean_w0, Type=as.factor("Data without 0")))
-# ggplot(cpE, aes(x=s_mean, y=y_mean, col=Type, shape=Type))+
-#   geom_point(size=4)+ scale_colour_grey()+ scale_shape_manual(values=c(16, 17))+
-#   geom_abline(col="red", lty=2, cex=0.5)+
-#   theme_bw()+
-#   # xlim(0,max(s_mean_w0, max(na.omit(y_mean_w0))))+
-#   # ylim(0,max(max(na.omit(y_mean_w0)), s_mean_w0))+
-#   ylab("Observed Alpine ibex hunted bag density")+xlab("Predicted")+
-#   theme(plot.title = element_text(hjust = 0.5))
-
 #3.0) Spatial layer: 10x10km grid
 grid_10km<-st_read(dsn="scripts/data/data_constrained_sp_20220902.gpkg", layer='grid_Reindeer') %>% dplyr::select(-Bioregion) %>%
   rename(Bioregion=BR_T10, NUTS=NUT, Eucmean=Eucalyptus) %>%
@@ -1860,14 +1693,14 @@ colnames(grid_10km)[9:17]<-gsub("_", "_0", colnames(grid_10km)[9:17])
 
 data %>% colnames()
 means<-sp %>% as_tibble() %>%
-  select(16:70) %>%          # selecciona columnas
+  select(16:70) %>%          # select columns
   summarise(across(everything(), ~ mean(.x, na.rm = TRUE)))
 sdss<-sp %>% as_tibble() %>%
-  select(16:70) %>%          # selecciona columnas
+  select(16:70) %>%          # select columns
   summarise(across(everything(), ~ sd(.x, na.rm = TRUE)))
 
 library(modEvA) #MESS
-summary(Reindeer_DensityModel) #Solo ponemos las variables que selecciona el modelo que son sobre las que vamos a hacer la prediccion
+summary(Reindeer_DensityModel) 
 data_<-data %>% as.data.frame() %>% dplyr::select(c(x_cen, y_cen))
 
 #10km
@@ -1899,21 +1732,19 @@ data_sp<-st_read(dsn="scripts/data/predicciones_20220811.gpkg",
 sp<-data_sp %>%
   mutate(lc10=lc_10_sum/lc_10_count*100, lc11=lc_11_sum/lc_11_count*100, lc12=lc_12_sum/lc_12_count*100, lc20=lc_20_sum/lc_20_count*100, lc30=lc_30_sum/lc_30_count*100, lc40=lc_40_sum/lc_40_count*100, lc50=lc_50_sum/lc_50_count*100, lc60=lc_60_sum/lc_60_count*100, lc61=lc_61_sum/lc_61_count*100, lc62=lc_62_sum/lc_62_count*100, lc70=lc_70_sum/lc_70_count*100, lc71=lc_71_sum/lc_71_count*100, lc72=lc_72_sum/lc_72_count*100, lc80=lc_80_sum/lc_80_count*100, lc81=lc_81_sum/lc_81_count*100, lc82=lc_82_sum/lc_82_count*100, lc90=lc_90_sum/lc_90_count*100, lc100=lc_100_sum/lc_100_count*100, lc110=lc_110_sum/lc_110_count*100,lc120=lc_120_sum/lc_120_count*100,lc121=lc_121_sum/lc_121_count*100,lc122=lc_122_sum/lc_122_count*100,lc130=lc_130_sum/lc_130_count*100,lc140=lc_140_sum/lc_140_count*100,lc150=lc_150_sum/lc_150_count*100,lc152=lc_152_sum/lc_152_count*100,lc153=lc_153_sum/lc_153_count*100,lc160=lc_160_sum/lc_160_count*100,lc170=lc_170_sum/lc_170_count*100,lc180=lc_180_sum/lc_180_count*100,lc190=lc_190_sum/lc_190_count*100,lc200=lc_200_sum/lc_200_count*100,lc201=lc_201_sum/lc_201_count*100,lc202=lc_202_sum/lc_202_count*100,lc210=lc_210_sum/lc_210_count*100,lc220=lc_220_sum/lc_220_count*100) %>% 
   dplyr::select(!matches("_cou") & !matches("_sum")) %>% 
-  #quito variables que no vaya a usar en el modelo 
-  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, #species, #me cargo variables que no necesito para el modelo
-                   grow_mean, #la variable grow tiene datos raros, as? que la voy a eliminar de nuestro set de datos
-                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,#, #Me cargo variables lc que en el summary son todo 0
-                   #BR_todasr1
+  # remove columns that are not covariates of the model or have weird values
+  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path,
+                   grow_mean,
+                   lc50, lc62, lc72, lc81, lc82,lc121, lc170,
                    "individualCount...39", "individualCount...51"
-  )) %>% #quito las bioregiones porque no las vamos a usar para el modelo
-  filter(dens<50) %>%  #tres poligonos de >Spain con areas muy muy muy muy small
-  # filter(dens>0 & dens<50) 
+  )) %>% 
+  filter(dens<50) %>% 
   select(locationID, locality, country, NUTS, BR_todasr1, area_km2, matches("harv"), dens, dens_r_trans, 
          matches("bio"), alt, snow, sun, Eucmean, hfp, 
          matches("lc"), 
          x_cen, y_cen)
 
-sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #Como para wild boar transformamos la variable de Eucmean para eliminar los valores negativos por valores de0 muy peque?os
+sp$Eucmean<-ifelse(sp$Eucmean<0, 0.01, sp$Eucmean) #remove negative values for Eucmean
 sp<-sp[!is.na(sp$dens),] #Remove NA values from RV: it does not remove any value
 
 #Modeling phase
@@ -1931,12 +1762,12 @@ sp<-sp[!is.na(sp$lc10),] #Remove NA values from the spset
 data<-sp  %>% mutate(across(all_of(vars_std),~ as.numeric(scale(.))))
 summary(data)
 
-#1.1 Creamos data set de calibrado y de validacion (80% / 20%)
+#1.1 Calibration and validation dataset (80% / 20%)
 set.seed(500)
 s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data_val <- data[-s_model,]; st_geometry(data_tra)<-NULL; st_geometry(data_val)<-NULL
 
 #2.0 VIF <2
-#2.1 seleccionamos variables para el vif, para eso miramos como es la distribucion de las variables
+#2.1 select vif  variables
 # hist(data_tra$Eucmean)
 # hist(data_tra$alt) 
 # hist(data_tra$snow)
@@ -1972,28 +1803,28 @@ s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data
 # hist(data_tra$lc210) #
 # hist(data_tra$lc220) #
 
-#2.1 hacemos el vif
+#2.1 vif
 variables<-data_tra %>% dplyr::select(matches("bio_"), alt, snow, Eucmean,lc10, lc11, lc12, lc30, lc40, lc60, lc70, lc90, 
                                       lc100, #lc120, 
                                       lc130, x_cen, y_cen)
 resultado.vif0<-usdm::vifstep(variables, th=2); resultado.vif0
 
 
-#2.2) Density Models: binomial negativa necesita que sea un numero entero, por eso se ha transformado la variable densidad *10000
+#2.2) Density Models: negative binomial need integer -> transform density *10000
 #ZINB
 count_vars <- c("bio_03", "bio_10", "bio_15", "lc10","lc30","lc40","lc60","lc70", "lc90","lc100","lc130")
 zi_vars <- count_vars
 res <- stepwise_zeroinfl_alternate(
   data = data_tra,
   response = "dens_r_trans",
-  count_fixed = c("x_cen","y_cen"),              # SIEMPRE dentro del count
+  count_fixed = c("x_cen","y_cen"),              # ALWAYS in the count side 
   count_candidates = count_vars,
-  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") si también los quieres fijos en ZI
+  zi_fixed = c("x_cen","y_cen"),                 # o c("x_cen","y_cen") to include as fixed in the ZI
   zi_candidates = zi_vars,
-  start_in = "zi",                               # como tu gráfico: primero inflado, luego conteo
+  start_in = "zi",                               
   dist = "negbin",
   criterion = "AIC",
-  min_improve = 0                                # pon 2 si quieres “solo si mejora >2”
+  min_improve = 0                                # minimum value for model improvment 
 )
 
 res$best_model
@@ -2028,27 +1859,6 @@ ggplot(cal_tot, aes(x = pred_mean, y = obs_mean)) +
   )
 
 
-# s_class <- cut2(data_val$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean <- as.matrix(tapply(data_val$Pred_Red, s_class, mean)) # calculating mean values for predicted
-# y_mean <- as.matrix(tapply(data_val$dens, s_class, mean)) # calculating mean values for observed
-# # corbr1<-cor.test(data_val$Pred_Red, data_val$dens)
-# data_val_w0<-data_val %>%filter(dens_r_trans>0)
-# s_class_w0 <- cut2(data_val_w0$Pred_Red, g=9) # defining bins (percentiles) on the predicted
-# s_mean_w0 <- as.matrix(tapply(data_val_w0$Pred_Red, s_class_w0, mean)) # calculating mean values for predicted
-# y_mean_w0 <- as.matrix(tapply(data_val_w0$dens, s_class_w0, mean)) # calculating mean values for observed
-# 
-# cpE<-rbind(data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data")),
-#            data.frame(s_mean=s_mean_w0, y_mean=y_mean_w0, Type=as.factor("Data without 0")))
-# ggplot(cpE, aes(x=s_mean, y=y_mean, col=Type, shape=Type))+
-#   geom_point(size=4)+ scale_colour_grey()+ scale_shape_manual(values=c(16, 17))+
-#   geom_abline(col="red", lty=2, cex=0.5)+
-#   theme_bw()+
-#   # xlim(0,max(s_mean_w0, max(na.omit(y_mean_w0))))+
-#   # ylim(0,max(max(na.omit(y_mean_w0)), s_mean_w0))+
-#   ylab("Observed Alpine ibex hunted bag density")+xlab("Predicted")+
-#   theme(plot.title = element_text(hjust = 0.5))
-
-
 #3.0) Spatial layer: 10x10km grid
 grid_10km<-st_read(dsn="scripts/data/data_constrained_sp_20220902.gpkg", layer='grid_Sd') %>% dplyr::select(-Bioregion) %>% 
   rename(Bioregion=BR_T10, NUTS=NUT, Eucmean=Eucalyptus) %>% 
@@ -2068,14 +1878,14 @@ colnames(grid_10km)[9:17]<-gsub("_", "_0", colnames(grid_10km)[9:17])
 
 data %>% colnames()
 means<-sp %>% as_tibble() %>% 
-  select(15:69) %>%          # selecciona columnas
+  select(15:69) %>%          # select columns
   summarise(across(everything(), ~ mean(.x, na.rm = TRUE)))
 sdss<-sp %>% as_tibble() %>% 
-  select(15:69) %>%          # selecciona columnas
+  select(15:69) %>%          # select columns
   summarise(across(everything(), ~ sd(.x, na.rm = TRUE)))
 
 library(modEvA) #MESS
-summary(SikaDeer_DensityModel) #Solo ponemos las variables que selecciona el modelo que son sobre las que vamos a hacer la prediccion
+summary(SikaDeer_DensityModel) 
 data_<-data %>% as.data.frame() %>% dplyr::select(c(x_cen, y_cen, bio_03, bio_10, bio_15, lc60))
 
 #10km
