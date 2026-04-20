@@ -1,9 +1,23 @@
+# ---------------------------------------------
+#  PhD Thesis: Large-scale monitoring of wild mammal abundance: 
+#  modeling frameworks for structured and unstructured data
+#  Chapter 3. Modeling frameworks for abundance patterns of European wild mammals
+#  Author: Sonia Illanas
+#  Institution: Institute of Game and Wildlife Research
+#  Date of last modification: 13/02/2026
+# ---------------------------------------------
+## R version 4.5.2
+## tidyverse version: 2.0.0
+## sf version: 1.0-21
+## viridis version: 0.6.5
+
 library(tidyverse)
 library(sf)
 library(viridis)
 # rm(list=ls())
-#Charge data
-data_spatial<-st_read(dsn="J:/IREC_Sonia/2_WIP/Report_202210/2_WIP/carnivores/Europe_Carnivores_WLDM_compiled_v2.0.gpkg", layer='Badger')
+
+#Charge Badger data
+data_spatial<-st_read(dsn="Europe_Carnivores_WLDM_compiled_v2.0.gpkg", layer='Badger')
 data_spatial<-data_spatial %>% mutate(BadgerSuit=round(BadgerSuit, 7), area_km2=round(area_km2, 2), alt_mean=round(alt_mean, 2), grow_mean=round(grow_mean, 4), snow_mean=round(snow_mean, 5), hfp_mean=round(hfp_mean, 3), sun_mean=round(sun_mean, 3), euc_mean=round(euc_mean, 7)) %>% 
   mutate(locationID=ifelse(country=="Norway", paste("NO_", locality, sep=""), locationID))  %>% 
   mutate(locationID_cntry=paste(locationID, country, sep="_")) %>% 
@@ -11,6 +25,8 @@ data_spatial<-data_spatial %>% mutate(BadgerSuit=round(BadgerSuit, 7), area_km2=
   
 data_spatialID<-data_spatial %>% dplyr::filter(locality!='Bayern')
 
+# IMPORTANT WARNING1: 
+# For removing Bayern federal estate it's needed that all rows have a locality not NA value. 
 data_spatial1<-data_spatial %>% dplyr::filter(locality!='Bayern') %>% 
                   mutate(dataTime=as.numeric(substr(dataTime, 1, 4)), harvTot=ifelse(harvTot>0, harvTot, 0),
                          lc10=lc_10_sum/lc_10_coun*100, lc11=lc_11_sum/lc_11_coun*100, lc12=lc_12_sum/lc_12_coun*100, lc20=lc_20_sum/lc_20_coun*100, lc30=lc_30_sum/lc_30_coun*100, lc40=lc_40_sum/lc_40_coun*100, lc50=lc_50_sum/lc_50_coun*100, lc60=lc_60_sum/lc_60_coun*100, lc61=lc_61_sum/lc_61_coun*100, lc62=lc_62_sum/lc_62_coun*100, lc70=lc_70_sum/lc_70_coun*100, lc71=lc_71_sum/lc_71_coun*100, lc72=lc_72_sum/lc_72_coun*100, lc80=lc_80_sum/lc_80_coun*100, lc81=lc_81_sum/lc_81_coun*100, lc82=lc_82_sum/lc_82_coun*100, lc90=lc_90_sum/lc_90_coun*100, lc100=lc_100_sum/lc_100_cou*100, lc110=lc_110_sum/lc_110_cou*100,lc120=lc_120_sum/lc_120_cou*100,lc121=lc_121_sum/lc_121_cou*100,lc122=lc_122_sum/lc_122_cou*100,lc130=lc_130_sum/lc_130_cou*100,lc140=lc_140_sum/lc_140_cou*100,lc150=lc_150_sum/lc_150_cou*100,lc152=lc_152_sum/lc_152_cou*100,lc153=lc_153_sum/lc_153_cou*100,lc160=lc_160_sum/lc_160_cou*100,lc170=lc_170_sum/lc_170_cou*100,lc180=lc_180_sum/lc_180_cou*100,lc190=lc_190_sum/lc_190_cou*100,lc200=lc_200_sum/lc_200_cou*100,lc201=lc_201_sum/lc_201_cou*100,lc202=lc_202_sum/lc_202_cou*100,lc210=lc_210_sum/lc_210_cou*100,lc220=lc_220_sum/lc_220_cou*100) %>% 
@@ -39,21 +55,11 @@ data_spatial1<-data_spatial1 %>% as_tibble() %>%
 data_spatial1[duplicated(data_spatial1$locationID_cntry),] %>% 
   mutate(country=as.factor(country)) %>% dplyr::select(country) %>% summary()
 
-# b<-data_spatial1 %>% filter(country=="Norway") #select Hungary
-# b[duplicated(b$locationID_cntry),]$locationID %>% length()
-# c<-b[b$locationID_cntry %>% duplicated(),] #extract the elements which locationID is duplicated
-# d<-b %>%  filter (!locationID_cntry %in% (c$locationID_cntry)) #remove the locationID elements duplicated
-# 
-# b %>% dplyr::select(!matches("bio") & !matches("mean") & !matches("lc")) %>% view()
-# 
-# d %>% dplyr::select(locationID, harvTot2014, harvTot2015, harvTot2016, harvTot2017, harvTot2018, harvTot2019, harvTot2020, harvTot2021) %>% view()
-# d$locationID_cntry %>% unique() %>% length()
-
 
 data_unique<-data_spatialID %>% mutate(dataTime=as.numeric(substr(dataTime, 1, 4)))
 data_unique<-data_unique %>% 
-  filter(dataTime>2011) %>%  #filtro los a?os que vamos a usar para pasar de formato long a wide
-  filter(country!="Sweden" | dataTime!=2012) %>%  #quito los datos de Sweden que tienen peor resolucion espacial
+  filter(dataTime>2011) %>%   # filter years that we're going to use for transforming data (long-wide)
+  filter(country!="Sweden" | dataTime!=2012) %>%    # retain Sweden finest data 
   filter(country!="Sweden" | dataTime!=2013) %>%
   filter(country!="Sweden" | dataTime!=2014) %>%
   filter(country!="Sweden" | dataTime!=2015) %>%
@@ -65,9 +71,13 @@ data_unique<-data_unique %>%
   filter(country!="Hungary" | dataTime!=2015) %>% 
   filter(country!="Hungary" | dataTime!=2016)
 
+# remove duplicated data by locationID_country  
+# --> expecting to have just one administrative unit per country and remove duplicated polygons
 data_unique<-data_unique %>% mutate(locationID_cntry=paste(locationID, country, sep="_"))
 data_unique<-data_unique[!duplicated(data_unique$locationID_cntry), ]
 
+# Join the non duplicated polygon layer with wide table by locationID and country
+# remove columns from each part that may cause confusion
 data_spatial_<- data_unique %>% dplyr::select(-harvTot, -species, -dataTime) %>%  
   inner_join(data_spatial1 %>% dplyr::select(!matches("bio") & !matches("lc") & !matches("mean"), -c(BR_todasr1, area_km2, BadgerSuit, locationID_cntry)), by=c("locationID", "country")) %>%
   rename(alt=alt_mean, Eucmean=euc_mean, hfp=hfp_mean, snow=snow_mean,  sun=sun_mean) %>% 
@@ -75,13 +85,17 @@ data_spatial_<- data_unique %>% dplyr::select(-harvTot, -species, -dataTime) %>%
                               ifelse(NUT=="NUT0" |NUT=="NUT1" |NUT=="NUTS1" |NUT=="NUT2" |NUT=="NUT3" |NUT=="NUTS3" |NUT=="Country", 2, 1))),
          locationID=as.factor(locationID),locality=as.factor(locality), country=as.factor(country), 
          Eucmean = replace_na(Eucmean, 0)) 
+
+# calculate area (km2)
 data_spatial_<-data_spatial_ %>% mutate(area_km2=st_area(data_spatial_)/1000000) ; attributes(data_spatial_$area_km2) = NULL
 
-#data_spatial_[is.na(data_spatial_)] <- 0
-
 data_spatial_ <-data_spatial_ %>% 
+  # calculate harvest Maximum between the years that we have data. 
+  # Be aware if new data is introduced you may add
+  # some more for example Red_spatial_$harvTot2022...etc.
   mutate(harvMax=pmax(harvTot2012, harvTot2013, harvTot2014, harvTot2015, harvTot2016, harvTot2017, harvTot2018, harvTot2019, harvTot2020, harvTot2021, na.rm = TRUE)) %>% 
   mutate(harvMax=ifelse(is.na(harvMax), 0, harvMax)) %>% 
+  # calculate density
   mutate(dens=round(harvMax/area_km2, 2)) %>% 
   mutate(dens_r_trans=dens*10000) %>% 
   dplyr::select(locationID, locality, country, NUT, #species,
@@ -89,31 +103,25 @@ data_spatial_ <-data_spatial_ %>%
                 matches("bio"), grow_mean, alt, Eucmean, hfp, snow, sun, area_km2, BR_todasr1, #Bioregion, matches("suit") ,
                 matches("lc"), BadgerSuit,
                 harvTot2012, harvTot2013, harvTot2014, harvTot2015,harvTot2016, harvTot2017,harvTot2018, harvTot2019,harvTot2020, harvTot2021, harvMax, dens, dens_r_trans)
-
+# calculate coordinates
 data_spatial_<- data_spatial_ %>% 
   mutate(x_cen=st_coordinates(st_centroid(geom))[,1], y_cen=st_coordinates(st_centroid(geom))[,2])
 #st_write(data_spatial_, dsn="H:/IREC_Sonia/2_WIP/Report_202210/2_WIP/2_GIS/europe_carnivores/predicciones_badger_20221215.gpkg", layer="data_spatial_v1.1", driver = "GPKG",append=TRUE)
 
 
-data_spatial_ %>% arrange(dens) %>% dplyr::select(dens, area_km2) %>% na.omit() %>% tail(n=25)
 summary(data_spatial_ )
 data_<-data_spatial_ %>%
   mutate(lc10=lc_10_sum/lc_10_coun*100, lc11=lc_11_sum/lc_11_coun*100, lc12=lc_12_sum/lc_12_coun*100, lc20=lc_20_sum/lc_20_coun*100, lc30=lc_30_sum/lc_30_coun*100, lc40=lc_40_sum/lc_40_coun*100, lc50=lc_50_sum/lc_50_coun*100, lc60=lc_60_sum/lc_60_coun*100, lc61=lc_61_sum/lc_61_coun*100, lc62=lc_62_sum/lc_62_coun*100, lc70=lc_70_sum/lc_70_coun*100, lc71=lc_71_sum/lc_71_coun*100, lc72=lc_72_sum/lc_72_coun*100, lc80=lc_80_sum/lc_80_coun*100, lc81=lc_81_sum/lc_81_coun*100, lc82=lc_82_sum/lc_82_coun*100, lc90=lc_90_sum/lc_90_coun*100, lc100=lc_100_sum/lc_100_cou*100, lc110=lc_110_sum/lc_110_cou*100,lc120=lc_120_sum/lc_120_cou*100,lc121=lc_121_sum/lc_121_cou*100,lc122=lc_122_sum/lc_122_cou*100,lc130=lc_130_sum/lc_130_cou*100,lc140=lc_140_sum/lc_140_cou*100,lc150=lc_150_sum/lc_150_cou*100,lc152=lc_152_sum/lc_152_cou*100,lc153=lc_153_sum/lc_153_cou*100,lc160=lc_160_sum/lc_160_cou*100,lc170=lc_170_sum/lc_170_cou*100,lc180=lc_180_sum/lc_180_cou*100,lc190=lc_190_sum/lc_190_cou*100,lc200=lc_200_sum/lc_200_cou*100,lc201=lc_201_sum/lc_201_cou*100,lc202=lc_202_sum/lc_202_cou*100,lc210=lc_210_sum/lc_210_cou*100,lc220=lc_220_sum/lc_220_cou*100) %>% 
   dplyr::select(!matches("_cou") & !matches("_sum")) %>% 
-  #quito variables que no vaya a usar en el modelo 
-  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, #species, #me cargo variables que no necesito para el modelo
-                   grow_mean, #la variable grow tiene datos raros, as? que la voy a eliminar de nuestro set de datos
-                   lc50, lc62, lc72, lc81, lc82,lc121, lc170#, #Me cargo variables lc que en el summary son todo 0
-                   #BR_todasr1
-  )) %>% #quito las bioregiones porque no las vamos a usar para el modelo
-  filter(dens<50) #tres poligonos de >Spain con areas muy muy muy muy small
+  # remove columns that are not covariates of the model or have weird values
+  dplyr::select(-c(excel_file,excel_path, shp_file, shp_path, 
+                   grow_mean, #weird values
+                   lc50, lc62, lc72, lc81, lc82,lc121, lc170 # all values are 0
+  )) %>% 
+  filter(dens<50) # remove silver polygons 
 
-# countries<-data_ %>% as_tibble %>% group_by(country) %>% dplyr::summarise(harvest=sum(harvMax)) 
-# ggplot(countries, aes(x=country, y=harvest)) +
-#   geom_bar(stat="identity") ; rm(countries)
-# ggplot(data_)+geom_boxplot(aes(NUT, harvMax/area_km2))
 
-data_$Eucmean<-ifelse(data_$Eucmean<0, 0.01, data_$Eucmean) #Como para wild boar transformamos la variable de Eucmean para eliminar los valores negativos por valores de0 muy peque?os
+data_$Eucmean<-ifelse(data_$Eucmean<0, 0.01, data_$Eucmean) #remove negative values from Eucmean
 data_<-data_[!is.na(data_$dens),] #Remove NA values from RV: it does not remove any value
 
 # colnames(data_)
@@ -139,14 +147,12 @@ data<-data_  %>% mutate(across(all_of(vars_std),~ as.numeric(scale(.))))
 
 
 
-#1.1 Creamos data set de calibrado y de validacion (80% / 20%)
+#1.1 Create calibration and validation data set (80% / 20%)
 set.seed(500)
-#data<-data %>% filter(country!="Finland") %>% filter(country!="Romania") %>% filter(country!="Austria") %>% filter(country!="Slovenia")
-#data<-data %>% filter(country!="Norway")
 s_model <- sample(nrow(data), nrow(data)*0.8) ; data_tra <- data[s_model,]; data_val <- data[-s_model,]
 
 #2.0 VIF <2
-#2.1 seleccionamos variables para el vif, para eso miramos como es la distribucion de las variables
+#2.1 select covariates for the VIF
 hist(data_tra$Eucmean)
 hist(data_tra$alt) 
 hist(data_tra$snow)
@@ -185,7 +191,7 @@ hist(data_tra$lc202) #
 hist(data_tra$lc210) #
 hist(data_tra$lc220) #
 
-#2.1 hacemos el vif
+#2.1 vif
 variables<-data_tra %>% dplyr::select(matches("bio_"), alt, snow, sun, hfp,lc10, lc11,
                                       lc30, lc40, lc60, lc70, lc90, lc100, lc130, lc190 #, x_scale, y_scale
 ) ; st_geometry(variables)<-NULL
@@ -196,28 +202,16 @@ library(MASS)
 library(glmmTMB)
 data.f<-data_tra %>% filter(dens_r_trans>0)
 DensityModel_notMK_without0_random_TMB = glmmTMB(dens_r_trans ~ x_cen+ y_cen+
-                                                   bio_3+bio_4+bio_15+alt+lc10+lc30+lc40+lc60+lc70+lc90+lc100+lc130+lc190+ (1 | country),  #no meto lc30 lc40 lc190 porque cuando había hecho el modelo GLM el modelo no habia seleccionado la variable
+                                                   bio_3+bio_4+bio_15+alt+lc10+lc30+lc40+lc60+lc70+lc90+lc100+lc130+lc190+ (1 | country), 
                                                  family = nbinom2, 
                                                  data=data.f, REML=F)
 summary(DensityModel_notMK_without0_random_TMB); #plot(effects::allEffects(DensityModel0_7))
 
-# library(MuMIn)
-# # Hacer compatible glmmTMB con dredge
-# options(na.action = "na.fail")  # necesario para dredge
-# # Dredge genera todos los modelos posibles y calcula AICc
-# mod <- MuMIn::dredge(DensityModel_notMK_without0_random_TMB)
-# # Ver los mejores modelos
-# head(mod)
-# # Extraer el modelo con menor AIC
-# best_model <- get.models(mod, 1)[[1]]
-
 Badger_DensityModel<-DensityModel_notMK_without0_random_TMB
-save(Badger_DensityModel, file="F:/IREC/PhD/D/Docs/Sonia/0_PhD/7_DocTesis/Chapter_ENETWILD/GIS/ModelResults/densityModel_Badger_glmmmTMB_Europe.Rdata")
-
-
+save(Badger_DensityModel, file="densityModel_Badger_glmmmTMB_Europe.Rdata")
 
 #Calibration plots - validation data
-data_val<-data_val %>% mutate(Pred_model=predict(Badger_DensityModel, data_val, type="response"), Pred_species=Pred_model/10000) #%>% rename(Bioregion=BR_todasr1)
+data_val<-data_val %>% mutate(Pred_model=predict(Badger_DensityModel, data_val, type="response"), Pred_species=Pred_model/10000)
 
 library(Hmisc)
 s_class <- cut2(data_val$Pred_species, g=9) # defining bins (percentiles) on the predicted
@@ -232,16 +226,9 @@ cpE<-rbind(data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data")
            data.frame(s_mean=s_mean_w0, y_mean=y_mean_w0, Type=as.factor("Data without 0"))
 )
 
-
-#cpE1<-data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data"), model=as.factor("DensityModelRandom1xy_with0TMB"))
 cpE1xy<-data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data"), model=as.factor("DensityModelRandom1xy_without0TMB"))
-#cpE2<-data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data"), model=as.factor("DensityModel2"))
-#cpE2xy<-data.frame(s_mean=s_mean,   y_mean=y_mean, Type=as.factor("All data"), model=as.factor("DensityModel2xy"))
 
-ggplot(cpE
-       #rbind(
-       #cpE1#, cpE1xy#, cpE2, cpE2xy)
-       , aes(x=s_mean, y=y_mean, col=Type, shape=Type))+
+ggplot(cpE, aes(x=s_mean, y=y_mean, col=Type, shape=Type))+
   geom_point(size=4)+ scale_colour_grey()+ scale_shape_manual(values=c(16, 17))+
   geom_abline(col="red", lty=2, cex=0.5)+
   theme_bw()+
@@ -294,13 +281,9 @@ s_mean_BRtodas4w0 <- as.matrix(tapply(data_val_BR4w0$Pred_species, s_class_BRtod
 y_mean_BRtodas4w0 <- as.matrix(tapply(data_val_BR4w0$dens, s_class_BRtodas4w0,mean)) # calculating mean values for observed
 
 cpbr<-rbind(data.frame(s_mean=s_mean_BRtodas1,   y_mean=y_mean_BRtodas1, Type=as.factor("All data"), Bioregion="Northern bioregion"),
-            #data.frame(s_mean=s_mean_BRtodas1w0, y_mean=y_mean_BRtodas1w0, Type=as.factor("Data without 0"), Bioregion="Northern bioregion"),
             #data.frame(s_mean=s_mean_BRtodas2,   y_mean=y_mean_BRtodas2, Type=as.factor("All data"), Bioregion="Southern bioregion"),
-            #data.frame(s_mean=s_mean_BRtodas2w0, y_mean=y_mean_BRtodas2w0, Type=as.factor("Data without 0"), Bioregion="Southern bioregion"),
             data.frame(s_mean= s_mean_BRtodas3, y_mean=y_mean_BRtodas3, Type=as.factor("All data"), Bioregion="Eastern bioregion"),
-            #data.frame(s_mean=s_mean_BRtodas3w0, y_mean=y_mean_BRtodas3w0, Type=as.factor("Data without 0"), Bioregion="Eastern bioregion"),
-            data.frame(s_mean=s_mean_BRtodas4,   y_mean=y_mean_BRtodas4, Type=as.factor("All data"), Bioregion="Western bioregion")#,
-            #data.frame(s_mean=s_mean_BRtodas4w0, y_mean=y_mean_BRtodas4w0, Type=as.factor("Data without 0"), Bioregion="Western bioregion")
+            data.frame(s_mean=s_mean_BRtodas4,   y_mean=y_mean_BRtodas4, Type=as.factor("All data"), Bioregion="Western bioregion")
 )
 
 ggplot(cpbr, aes(x=s_mean, y=y_mean, #shape=Type, col=Type
@@ -318,7 +301,7 @@ ggplot(cpbr, aes(x=s_mean, y=y_mean, #shape=Type, col=Type
 
 
 #Spatial layer: 10x10km grid
-grid_10km<-st_read("F:/IREC/PhD/D/Docs/Sonia/0_PhD/7_DocTesis/Chapter_ENETWILD/GIS/HB_chapter/data/grid10_ToPredict_constrained.gpkg",  
+grid_10km<-st_read("grid10_ToPredict_constrained.gpkg",  
                    layer="grid_10km_badger") %>% dplyr::select(-Bioregion) %>% 
   rename(Bioregion=BR_T10, NUTS=NUT, Eucmean=Eucalyptus) %>% 
   mutate(NUTS=as.factor(NUTS), 
@@ -362,6 +345,6 @@ predBadger10km<-grid10km_mess %>%
   mutate(Pred_species=Pred_model/10000)
 
 st_write(predBadger10km, 
-         dsn="F:/IREC/PhD/D/Docs/Sonia/0_PhD/7_DocTesis/Chapter_ENETWILD/GIS/ModelResults/predicciones_20260203.gpkg",
+         dsn="predicciones_20260203.gpkg",
          layer="DensityModel_grid10km_Badger_GLMM_xy_noMK_with0_20221220_CH", 
          driver = "GPKG",append=TRUE)
