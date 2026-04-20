@@ -13,7 +13,7 @@
 library(tidyverse)
 library(sf)
 #rm(list=ls())
-#Charge Red deer data
+#Charge Fallow deer data
 spatial<-st_read(dsn="wildRuminants_v5.gpkg", layer='Fd')
 
 # IMPORTANT WARNING1: 
